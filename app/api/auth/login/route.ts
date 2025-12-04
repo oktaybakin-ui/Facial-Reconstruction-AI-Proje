@@ -53,10 +53,10 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
-    console.error('Login error:', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
     return NextResponse.json(
-      { error: 'Sunucu hatası', details: error.message },
+      { error: 'Sunucu hatası', details: errorMessage },
       { status: 500 }
     );
   }

@@ -266,16 +266,17 @@ export default function CaseDetailContent({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
-      <nav className="glass shadow-lg border-b border-white/20">
+    <div className="min-h-screen bg-gray-50">
+      {/* Modern Navigation */}
+      <nav className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <Link href="/dashboard" className="text-2xl font-bold gradient-text">
+          <div className="flex justify-between items-center h-16">
+            <Link href="/dashboard" className="text-xl font-bold text-gray-900 hover:opacity-80 transition-opacity">
               AI Yüz Rekonstrüksiyon Platformu
             </Link>
             <Link
               href="/dashboard"
-              className="px-5 py-2.5 text-gray-700 hover:text-blue-600 font-medium rounded-xl hover:bg-white/50 transition-all duration-300"
+              className="px-5 py-2 bg-gray-200 text-gray-700 rounded-2xl hover:bg-gray-300 transition-colors font-semibold"
             >
               ← Dashboard'a Dön
             </Link>
@@ -283,57 +284,63 @@ export default function CaseDetailContent({
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Case Summary Card */}
-        <div className="glass rounded-2xl shadow-xl p-6 mb-8 border border-white/20">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-extrabold text-gray-900">
-              Olgu: <span className="gradient-text">{caseData.case_code}</span>
-            </h1>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Modern Case Summary Card */}
+        <div className="bg-white border-2 border-gray-200 rounded-3xl shadow-xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <span className="text-gray-600">Bölge:</span>
-              <span className="ml-2 font-medium">{caseData.region}</span>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Olgu Detayı
+              </h1>
+              <p className="text-2xl font-extrabold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">{caseData.case_code}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="p-3 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-100">
+              <div className="text-xs text-gray-500 mb-1">Bölge</div>
+              <div className="font-semibold text-gray-900">{caseData.region}</div>
             </div>
             {caseData.age && (
-              <div>
-                <span className="text-gray-600">Yaş:</span>
-                <span className="ml-2 font-medium">{caseData.age}</span>
+              <div className="p-3 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl border border-blue-100">
+                <div className="text-xs text-gray-500 mb-1">Yaş</div>
+                <div className="font-semibold text-gray-900">{caseData.age}</div>
               </div>
             )}
             {caseData.sex && (
-              <div>
-                <span className="text-gray-600">Cinsiyet:</span>
-                <span className="ml-2 font-medium">{caseData.sex}</span>
+              <div className="p-3 bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl border border-pink-100">
+                <div className="text-xs text-gray-500 mb-1">Cinsiyet</div>
+                <div className="font-semibold text-gray-900">{caseData.sex}</div>
               </div>
             )}
             {caseData.width_mm && caseData.height_mm && (
-              <div>
-                <span className="text-gray-600">Boyut:</span>
-                <span className="ml-2 font-medium">
-                  {caseData.width_mm} x {caseData.height_mm} mm
-                </span>
+              <div className="p-3 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
+                <div className="text-xs text-gray-500 mb-1">Boyut</div>
+                <div className="font-semibold text-gray-900">
+                  {caseData.width_mm} × {caseData.height_mm} mm
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Pre-op Photo */}
+        {/* Modern Pre-op Photo Section */}
         {preopPhoto ? (
-          <div className="glass rounded-2xl shadow-xl p-6 mb-8 border border-white/20">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-gray-900">📸 Pre-op Fotoğraf</h2>
-              <div className="flex gap-2">
+          <div className="bg-white border-2 border-gray-200 rounded-3xl shadow-xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Pre-op Fotoğraf</h2>
+                <p className="text-sm text-gray-600">Lezyon bölgesini işaretleyin ve AI analizi çalıştırın</p>
+              </div>
+              <div className="flex gap-3">
                 {analysisResult && analysisResult.flap_suggestions.some(f => f.flap_drawing) && (
                   <button
                     onClick={() => {
                       setShowFlapDrawings(!showFlapDrawings);
                       if (!showFlapDrawings) setShowAnnotation(false);
                     }}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                    className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-2xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-105"
                   >
-                    {showFlapDrawings ? '👁️ Flep Çizimlerini Gizle' : '📐 Flep Çizimlerini Göster'}
+                    {showFlapDrawings ? '👁️ Çizimleri Gizle' : '📐 Çizimleri Göster'}
                   </button>
                 )}
                 <button
@@ -341,13 +348,13 @@ export default function CaseDetailContent({
                     setShowAnnotation(!showAnnotation);
                     if (!showAnnotation) setShowFlapDrawings(false);
                   }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                  className="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-2xl hover:from-indigo-600 hover:to-purple-600 transition-all duration-300 text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-105"
                 >
                   {showAnnotation ? '✕ İşaretlemeyi Kapat' : '✏️ Lezyonu İşaretle'}
                 </button>
               </div>
             </div>
-            <div className="relative w-full max-w-2xl bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl overflow-hidden shadow-lg mb-4 p-4">
+            <div className="relative w-full max-w-2xl mx-auto bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl overflow-hidden shadow-2xl mb-6 p-4 border border-white/50">
               <UnifiedImageOverlay
                 imageUrl={preopPhoto.url}
                 annotation={annotation}
@@ -362,64 +369,63 @@ export default function CaseDetailContent({
                 onShapeChange={(shape) => setAnnotationShape(shape)}
               />
               {annotation && (
-                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
-                  ✅ Lezyon işaretlendi: {Math.round(annotation.width)}px x {Math.round(annotation.height)}px
+                <div className="mt-3 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl text-sm text-indigo-800 font-medium">
+                  ✅ Lezyon işaretlendi: {Math.round(annotation.width)}px × {Math.round(annotation.height)}px
                 </div>
               )}
             </div>
-              {!analysisResult ? (
-                <div className="space-y-3">
-                  {!annotation ? (
-                    <>
-                      <div className="p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg text-sm text-yellow-900">
-                        <div className="flex items-start">
-                          <span className="text-xl mr-2">⚠️</span>
-                          <div>
-                            <strong>Önemli:</strong> AI analizi çalıştırmadan önce lezyon bölgesini işaretlemelisiniz!
-                            <br />
-                            <span className="text-xs mt-1 block">"Lezyonu İşaretle" butonuna tıklayın ve fotoğraf üzerinde lezyon alanını sürükle-bırak ile çizin. AI çizimleri sadece bu manuel işaretlediğiniz konuma göre yapılacak.</span>
-                          </div>
+            {!analysisResult ? (
+              <div className="space-y-4">
+                {!annotation ? (
+                  <>
+                    <div className="p-5 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl shadow-md">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl">⚠️</span>
+                        <div>
+                          <strong className="text-amber-900 block mb-1">Önemli:</strong>
+                          <p className="text-sm text-amber-800 mb-2">AI analizi çalıştırmadan önce lezyon bölgesini işaretlemelisiniz!</p>
+                          <p className="text-xs text-amber-700">"Lezyonu İşaretle" butonuna tıklayın ve fotoğraf üzerinde lezyon alanını çizin.</p>
                         </div>
                       </div>
-                      <button
-                        onClick={() => setShowAnnotation(true)}
-                        className="px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium"
-                      >
-                        📝 Önce Lezyonu İşaretle
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="p-4 bg-green-50 border-2 border-green-400 rounded-lg text-sm text-green-900">
-                        <div className="flex items-start">
-                          <span className="text-xl mr-2">✅</span>
-                          <div>
-                            <strong>Lezyon işaretlendi!</strong> AI çizimleri SADECE bu manuel işaretlediğiniz konuma göre yapılacak.
-                            <br />
-                            <span className="text-xs mt-1 block">Kesi çizgileri, flep alanları ve tüm cerrahi detaylar bu işaretlediğiniz alana göre planlanacak.</span>
-                          </div>
+                    </div>
+                    <button
+                      onClick={() => setShowAnnotation(true)}
+                      className="btn-primary w-full sm:w-auto"
+                    >
+                      📝 Önce Lezyonu İşaretle
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="p-5 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-300 rounded-xl shadow-md">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl">✅</span>
+                        <div>
+                          <strong className="text-emerald-900 block mb-1">Lezyon işaretlendi!</strong>
+                          <p className="text-sm text-emerald-800">AI çizimleri bu manuel işaretlediğiniz konuma göre yapılacak.</p>
                         </div>
                       </div>
-                      <button
-                        onClick={handleAnalyze}
-                        disabled={analyzing}
-                        className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl hover:scale-105"
-                      >
-                        {analyzing ? '🤖 Analiz ediliyor...' : '🚀 AI Analizi Çalıştır →'}
-                      </button>
-                    </>
-                  )}
-                </div>
-              ) : (
-              <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700">
+                    </div>
+                    <button
+                      onClick={handleAnalyze}
+                      disabled={analyzing}
+                      className="btn-primary w-full sm:w-auto text-lg"
+                    >
+                      {analyzing ? '🤖 Analiz ediliyor...' : '🚀 AI Analizi Çalıştır →'}
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl text-emerald-800 font-medium">
                 ✅ AI analizi tamamlandı. Sonuçlar aşağıda görüntüleniyor.
               </div>
             )}
           </div>
         ) : (
-          <div className="glass rounded-2xl shadow-xl p-6 mb-8 border border-white/20">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">📸 Pre-op Fotoğraf</h2>
-            <div className="p-6 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700">
+          <div className="card-hover">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Pre-op Fotoğraf</h2>
+            <div className="p-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl text-amber-800">
               ⚠️ Pre-op fotoğraf yüklenmemiş. Yeni olgu ekleme sayfasından fotoğraf yükleyebilirsiniz.
             </div>
           </div>
@@ -450,56 +456,79 @@ export default function CaseDetailContent({
           </div>
         )}
 
-        {/* AI Results */}
+        {/* Modern AI Results */}
         {analysisResult && (
-          <div className="space-y-8">
-            {/* Vision Summary */}
-            <div className="glass rounded-2xl shadow-xl p-6 border border-white/20">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">🔍 Görüntü Analizi Özeti</h2>
+          <div className="space-y-6 animate-fadeIn">
+            {/* Modern Vision Summary */}
+            <div className="card-hover">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <span className="text-xl">🔍</span>
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">Görüntü Analizi Özeti</h2>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <span className="text-gray-600">Tespit Edilen Bölge:</span>
-                  <span className="ml-2 font-medium">{analysisResult.vision_summary.detected_region}</span>
+                <div className="p-4 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-100">
+                  <div className="text-xs text-gray-500 mb-1">Tespit Edilen Bölge</div>
+                  <div className="font-semibold text-gray-900">{analysisResult.vision_summary.detected_region}</div>
                 </div>
-                <div>
-                  <span className="text-gray-600">Tahmini Boyut:</span>
-                  <span className="ml-2 font-medium">
-                    {analysisResult.vision_summary.estimated_width_mm} x{' '}
-                    {analysisResult.vision_summary.estimated_height_mm} mm
-                  </span>
+                <div className="p-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl border border-blue-100">
+                  <div className="text-xs text-gray-500 mb-1">Tahmini Boyut</div>
+                  <div className="font-semibold text-gray-900">
+                    {analysisResult.vision_summary.estimated_width_mm} × {analysisResult.vision_summary.estimated_height_mm} mm
+                  </div>
                 </div>
-                <div>
-                  <span className="text-gray-600">Derinlik:</span>
-                  <span className="ml-2 font-medium">{analysisResult.vision_summary.depth_estimation}</span>
+                <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
+                  <div className="text-xs text-gray-500 mb-1">Derinlik</div>
+                  <div className="font-semibold text-gray-900">{analysisResult.vision_summary.depth_estimation}</div>
                 </div>
-                <div>
-                  <span className="text-gray-600">Estetik Zon:</span>
-                  <span className="ml-2 font-medium">
+                <div className="p-4 bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl border border-pink-100">
+                  <div className="text-xs text-gray-500 mb-1">Estetik Zon</div>
+                  <div className="font-semibold text-gray-900">
                     {analysisResult.vision_summary.aesthetic_zone ? 'Evet' : 'Hayır'}
-                  </span>
+                  </div>
                 </div>
                 {analysisResult.vision_summary.critical_structures.length > 0 && (
-                  <div className="md:col-span-2">
-                    <span className="text-gray-600">Kritik Yapılar:</span>
-                    <span className="ml-2 font-medium">
+                  <div className="md:col-span-2 p-4 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-100">
+                    <div className="text-xs text-gray-500 mb-1">Kritik Yapılar</div>
+                    <div className="font-semibold text-gray-900">
                       {analysisResult.vision_summary.critical_structures.join(', ')}
-                    </span>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Flap Suggestions */}
-            <div className="glass rounded-2xl shadow-xl p-6 border border-white/20">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">💡 Flep Önerileri</h2>
-              <div className="space-y-6">
+            {/* Modern Flap Suggestions */}
+            <div className="card-hover">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <span className="text-xl">💡</span>
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">Flep Önerileri</h2>
+              </div>
+              <div className="space-y-4">
                 {analysisResult.flap_suggestions.map((flap: FlapSuggestion, index: number) => (
                   <div
                     key={index}
-                    className="glass border border-white/20 rounded-2xl p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
+                    className="card-hover border-2 border-transparent hover:border-indigo-200"
                   >
-                    <div className="flex justify-between items-start mb-4">
-                      <h3 className="text-lg font-semibold">{flap.flap_name}</h3>
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">{flap.flap_name}</h3>
+                        <div className="flex flex-wrap gap-2">
+                          <span
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${getCategoryColor(
+                              flap.category
+                            )}`}
+                          >
+                            {getCategoryText(flap.category)}
+                          </span>
+                          <span className="px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 rounded-lg border border-purple-200">
+                            Uygunluk: {flap.suitability_score}/100
+                          </span>
+                        </div>
+                      </div>
                       {flap.flap_drawing && (
                         <button
                           onClick={() => {
@@ -507,111 +536,112 @@ export default function CaseDetailContent({
                             setShowFlapDrawings(true);
                             setShowAnnotation(false);
                           }}
-                          className="px-3 py-1 text-xs bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                          className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all text-sm font-medium shadow-md hover:shadow-lg whitespace-nowrap"
                         >
                           {selectedFlapIndex === index ? '✕ Çizimi Kapat' : '📐 Fotoğrafta Göster'}
                         </button>
                       )}
-                      <div className="flex gap-2">
-                        <span
-                          className={`px-3 py-1 text-sm font-medium rounded-full ${getCategoryColor(
-                            flap.category
-                          )}`}
-                        >
-                          {getCategoryText(flap.category)}
-                        </span>
-                        <span className="px-3 py-1 text-sm font-medium bg-purple-100 text-purple-800 rounded-full">
-                          Uygunluk: {flap.suitability_score}/100
-                        </span>
-                      </div>
                     </div>
 
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="font-medium text-gray-700 mb-1">Neden uygun?</h4>
-                        <p className="text-gray-600">{flap.why}</p>
+                    <div className="space-y-5">
+                      <div className="p-4 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-100">
+                        <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                          <span className="text-indigo-600">💡</span> Neden uygun?
+                        </h4>
+                        <p className="text-gray-700 leading-relaxed">{flap.why}</p>
                       </div>
 
                       {flap.advantages.length > 0 && (
-                        <div>
-                          <h4 className="font-medium text-gray-700 mb-1">Avantajlar:</h4>
-                          <ul className="list-disc list-inside text-gray-600 space-y-1">
+                        <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
+                          <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                            <span className="text-emerald-600">✅</span> Avantajlar
+                          </h4>
+                          <ul className="list-disc list-inside text-gray-700 space-y-1.5">
                             {flap.advantages.map((adv, i) => (
-                              <li key={i}>{adv}</li>
+                              <li key={i} className="leading-relaxed">{adv}</li>
                             ))}
                           </ul>
                         </div>
                       )}
 
                       {flap.cautions.length > 0 && (
-                        <div>
-                          <h4 className="font-medium text-gray-700 mb-1">Dikkat Edilmesi Gerekenler:</h4>
-                          <ul className="list-disc list-inside text-gray-600 space-y-1">
+                        <div className="p-4 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-100">
+                          <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                            <span className="text-amber-600">⚠️</span> Dikkat Edilmesi Gerekenler
+                          </h4>
+                          <ul className="list-disc list-inside text-gray-700 space-y-1.5">
                             {flap.cautions.map((caution, i) => (
-                              <li key={i}>{caution}</li>
+                              <li key={i} className="leading-relaxed">{caution}</li>
                             ))}
                           </ul>
                         </div>
                       )}
 
-                        {flap.alternatives.length > 0 && (
-                          <div>
-                            <h4 className="font-medium text-gray-700 mb-1">Alternatifler:</h4>
-                            <p className="text-gray-600">{flap.alternatives.join(', ')}</p>
-                          </div>
-                        )}
-
-                        <div>
-                          <span className="text-gray-600">Estetik Risk:</span>
-                          <span className="ml-2 font-medium capitalize">{flap.aesthetic_risk}</span>
+                      {flap.alternatives.length > 0 && (
+                        <div className="p-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl border border-blue-100">
+                          <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                            <span className="text-blue-600">🔄</span> Alternatifler
+                          </h4>
+                          <p className="text-gray-700">{flap.alternatives.join(', ')}</p>
                         </div>
+                      )}
 
-                        {flap.surgical_technique && (
-                          <div className="mt-4 pt-4 border-t border-gray-200">
-                            <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
-                              🔪 Cerrahi Teknik
-                            </h4>
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-gray-700 whitespace-pre-line text-sm leading-relaxed">
-                              {flap.surgical_technique}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {flap.video_link && (
-                          <div className="mt-4 pt-4 border-t border-gray-200">
-                            <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
-                              🎥 Uygulama Videosu
-                            </h4>
-                            <a
-                              href={flap.video_link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-                            >
-                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                              </svg>
-                              YouTube'da İzle
-                            </a>
-                          </div>
-                        )}
+                      <div className="p-3 bg-gradient-to-br from-slate-50 to-gray-50 rounded-xl border border-slate-200">
+                        <span className="text-sm text-gray-600">Estetik Risk:</span>
+                        <span className="ml-2 font-semibold text-gray-900 capitalize">{flap.aesthetic_risk}</span>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
 
-            {/* Safety Review */}
+                      {flap.surgical_technique && (
+                        <div className="mt-4 pt-5 border-t-2 border-gray-200">
+                          <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                            <span className="text-xl">🔪</span> Cerrahi Teknik
+                          </h4>
+                          <div className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl text-gray-800 whitespace-pre-line text-sm leading-relaxed shadow-inner">
+                            {flap.surgical_technique}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {flap.video_link && (
+                        <div className="mt-4 pt-5 border-t-2 border-gray-200">
+                          <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                            <span className="text-xl">🎥</span> Uygulama Videosu
+                          </h4>
+                          <a
+                            href={flap.video_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-105"
+                          >
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                            </svg>
+                            YouTube'da İzle
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Modern Safety Review */}
             {analysisResult.safety_review && (
-              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg">
-                <h3 className="font-semibold text-gray-900 mb-2">Güvenlik İncelemesi</h3>
-                <p className="text-sm text-gray-700 mb-4">{analysisResult.safety_review.legal_disclaimer}</p>
+              <div className="card-hover border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-400 rounded-xl flex items-center justify-center shadow-lg">
+                    <span className="text-xl">🛡️</span>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900">Güvenlik İncelemesi</h3>
+                </div>
+                <p className="text-sm text-gray-700 mb-4 leading-relaxed">{analysisResult.safety_review.legal_disclaimer}</p>
                 {analysisResult.safety_review.comments.length > 0 && (
-                  <div>
-                    <h4 className="font-medium text-gray-800 mb-1">Notlar:</h4>
-                    <ul className="list-disc list-inside text-sm text-gray-700">
+                  <div className="p-4 bg-white/60 rounded-xl border border-amber-200">
+                    <h4 className="font-semibold text-gray-800 mb-2">Notlar:</h4>
+                    <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
                       {analysisResult.safety_review.comments.map((comment, i) => (
-                        <li key={i}>{comment}</li>
+                        <li key={i} className="leading-relaxed">{comment}</li>
                       ))}
                     </ul>
                   </div>
@@ -619,29 +649,38 @@ export default function CaseDetailContent({
               </div>
             )}
 
-            {/* Legal Disclaimer */}
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-600">
-              <p>
-                <strong>Önemli:</strong> Bu öneriler yalnızca karar destek amaçlıdır; nihai karar, hastayı 
+            {/* Modern Legal Disclaimer */}
+            <div className="card-hover border-2 border-slate-200 bg-gradient-to-br from-slate-50 to-gray-50">
+              <p className="text-sm text-gray-700 leading-relaxed">
+                <strong className="text-gray-900">Önemli:</strong> Bu öneriler yalnızca karar destek amaçlıdır; nihai karar, hastayı 
                 değerlendiren klinik ekibe aittir.
               </p>
             </div>
           </div>
         )}
 
-        {/* Post-op Photos */}
-        <div className="glass rounded-2xl shadow-xl p-6 mt-8 border border-white/20">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">📷 Post-op Fotoğraflar</h2>
+        {/* Modern Post-op Photos */}
+        <div className="card-hover animate-fadeIn">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg">
+              <span className="text-xl">📷</span>
+            </div>
+            <h2 className="text-xl font-bold text-gray-900">Post-op Fotoğraflar</h2>
+          </div>
           
-          <div className="mb-4">
+          <div className="mb-6">
             <input
               type="file"
               accept="image/*"
               onChange={handlePostopUpload}
               disabled={uploadingPostop}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+              className="input-modern"
             />
-            {uploadingPostop && <p className="mt-2 text-sm text-gray-600">Yükleniyor...</p>}
+            {uploadingPostop && (
+              <p className="mt-3 text-sm text-indigo-600 font-medium flex items-center gap-2">
+                <span className="animate-spin">⏳</span> Yükleniyor...
+              </p>
+            )}
           </div>
 
           {postopPhotos.length > 0 ? (
