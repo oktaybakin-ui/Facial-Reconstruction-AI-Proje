@@ -5,7 +5,7 @@ import type { FlapSuggestion } from '@/types/ai';
 
 export type AnnotationShape = 'rectangle' | 'circle' | 'polygon';
 
-interface Annotation {
+export interface Annotation {
   x: number;
   y: number;
   width: number;
