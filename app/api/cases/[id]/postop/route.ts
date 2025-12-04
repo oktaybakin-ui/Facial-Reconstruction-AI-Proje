@@ -3,10 +3,11 @@ import { createServerClient } from '@/lib/supabaseClient';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createServerClient();
+    const { id } = await params;
     
     const body = await request.json();
     const userId = body.user_id;
@@ -24,7 +25,7 @@ export async function POST(
     const { data: caseData, error: caseError } = await supabase
       .from('cases')
       .select('user_id')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', userId)
       .single();
 
@@ -39,7 +40,7 @@ export async function POST(
     const { data: photoData, error: photoError } = await supabase
       .from('case_photos')
       .insert({
-        case_id: params.id,
+        case_id: id,
         type: 'postop',
         url: photoUrl,
       })
@@ -57,10 +58,11 @@ export async function POST(
       { photo: photoData, message: 'Post-op fotoğraf başarıyla eklendi' },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
     console.error('Post-op upload error:', error);
     return NextResponse.json(
-      { error: 'Sunucu hatası', details: error.message },
+      { error: 'Sunucu hatası', details: errorMessage },
       { status: 500 }
     );
   }
