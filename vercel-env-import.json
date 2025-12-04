@@ -1,0 +1,31 @@
+{
+  "NEXT_PUBLIC_SUPABASE_URL": {
+    "value": "https://clcztcmxkmhrtnajciqd.supabase.co",
+    "target": ["production", "preview", "development"]
+  },
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY": {
+    "value": "BURAYA_SUPABASE_ANON_KEY_YAZIN",
+    "target": ["production", "preview", "development"]
+  },
+  "SUPABASE_SERVICE_ROLE_KEY": {
+    "value": "BURAYA_SUPABASE_SERVICE_ROLE_KEY_YAZIN",
+    "target": ["production", "preview", "development"]
+  },
+  "OPENAI_API_KEY": {
+    "value": "BURAYA_OPENAI_API_KEY_YAZIN",
+    "target": ["production", "preview", "development"]
+  },
+  "ANTHROPIC_API_KEY": {
+    "value": "BURAYA_ANTHROPIC_API_KEY_YAZIN",
+    "target": ["production", "preview", "development"]
+  },
+  "ADMIN_EMAILS": {
+    "value": "admin@example.com",
+    "target": ["production", "preview", "development"]
+  },
+  "AUTO_APPROVE_USERS": {
+    "value": "false",
+    "target": ["production", "preview", "development"]
+  }
+}
+
