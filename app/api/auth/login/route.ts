@@ -1,0 +1,64 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabaseClient';
+import { loginSchema } from '@/lib/validators';
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    
+    // Validate input
+    const validationResult = loginSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: 'Geçersiz e-posta veya şifre', details: validationResult.error.errors },
+        { status: 400 }
+      );
+    }
+
+    const { email, password } = validationResult.data;
+
+    // Sign in with Supabase Auth
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error || !data.user) {
+      return NextResponse.json(
+        { error: 'Giriş başarısız. E-posta veya şifre hatalı.' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user is verified
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('is_verified')
+      .eq('id', data.user.id)
+      .single();
+
+    const isVerified = profile?.is_verified ?? false;
+
+    return NextResponse.json(
+      {
+        user: {
+          id: data.user.id,
+          email: data.user.email,
+        },
+        session: data.session,
+        is_verified: isVerified,
+        message: isVerified 
+          ? 'Giriş başarılı' 
+          : 'Hesabınız doğrulanmayı bekliyor',
+      },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    console.error('Login error:', error);
+    return NextResponse.json(
+      { error: 'Sunucu hatası', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
