@@ -65,7 +65,7 @@ export async function PUT(
     const validationResult = createCaseSchema.partial().safeParse(updateData);
     if (!validationResult.success) {
       return NextResponse.json(
-        { error: 'Geçersiz veri', details: validationResult.error.errors },
+        { error: 'Geçersiz veri', details: validationResult.error.issues },
         { status: 400 }
       );
     }
