@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
-import UnifiedImageOverlay from './UnifiedImageOverlay';
+import UnifiedImageOverlay, { type Annotation, type AnnotationShape } from './UnifiedImageOverlay';
 import type { Case, CasePhoto } from '@/types/cases';
 import type { AIResult, FlapSuggestion } from '@/types/ai';
 
@@ -27,8 +27,8 @@ export default function CaseDetailContent({
   const [error, setError] = useState<string | null>(null);
   const [uploadingPostop, setUploadingPostop] = useState(false);
   const [showAnnotation, setShowAnnotation] = useState(false);
-  const [annotation, setAnnotation] = useState<{ x: number; y: number; width: number; height: number; shape?: 'rectangle' | 'circle' } | null>(null);
-  const [annotationShape, setAnnotationShape] = useState<'rectangle' | 'circle'>('rectangle');
+  const [annotation, setAnnotation] = useState<Annotation | null>(null);
+  const [annotationShape, setAnnotationShape] = useState<AnnotationShape>('rectangle');
   const [imageInfo, setImageInfo] = useState<{ naturalWidth: number; naturalHeight: number; displayedWidth: number; displayedHeight: number } | null>(null);
   const [showFlapDrawings, setShowFlapDrawings] = useState(true);
   const [selectedFlapIndex, setSelectedFlapIndex] = useState<number | undefined>(undefined);
@@ -97,6 +97,29 @@ export default function CaseDetailContent({
             width: (radius * 2 / imageInfo.displayedWidth) * 1000,
             height: (radius * 2 / imageInfo.displayedHeight) * 1000,
             shape: 'circle',
+            displayed_width: imageInfo.displayedWidth,
+            displayed_height: imageInfo.displayedHeight,
+          };
+        } else if (shape === 'polygon' && annotation.points && annotation.points.length > 0) {
+          // For polygon: normalize points
+          const normalizedPoints = annotation.points.map(point => ({
+            x: (point.x / imageInfo.displayedWidth) * 1000,
+            y: (point.y / imageInfo.displayedHeight) * 1000,
+          }));
+          
+          // Calculate bounding box for polygon
+          const minX = Math.min(...normalizedPoints.map(p => p.x));
+          const minY = Math.min(...normalizedPoints.map(p => p.y));
+          const maxX = Math.max(...normalizedPoints.map(p => p.x));
+          const maxY = Math.max(...normalizedPoints.map(p => p.y));
+          
+          normalizedAnnotation = {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY,
+            shape: 'polygon',
+            points: normalizedPoints,
             displayed_width: imageInfo.displayedWidth,
             displayed_height: imageInfo.displayedHeight,
           };
