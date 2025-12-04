@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -25,6 +25,13 @@ export default function CaseDetailContent({
   const router = useRouter();
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AIResult | null>(aiResult);
+
+  // Update analysisResult when aiResult prop changes
+  useEffect(() => {
+    if (aiResult) {
+      setAnalysisResult(aiResult);
+    }
+  }, [aiResult]);
   const [error, setError] = useState<string | null>(null);
   const [uploadingPostop, setUploadingPostop] = useState(false);
   const [showAnnotation, setShowAnnotation] = useState(false);
