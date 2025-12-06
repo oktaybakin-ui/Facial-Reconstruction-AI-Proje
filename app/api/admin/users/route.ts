@@ -38,7 +38,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all user profiles using service role key for admin access
-    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey);
     const { data: profiles, error: profilesError } = await adminSupabase
       .from('user_profiles')
       .select('*')
