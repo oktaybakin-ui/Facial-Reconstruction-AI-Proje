@@ -5,10 +5,16 @@
 const fs = require('fs');
 const path = require('path');
 
-// Vercel'de çalışıyorsak, environment variable'lar zaten yüklü, script'e gerek yok
-if (process.env.VERCEL) {
+// Vercel'de çalışıyorsak veya environment variable'lar zaten yüklüyse, script'e gerek yok
+// Vercel'de OPENAI_API_KEY zaten process.env'de olmalı
+if (process.env.VERCEL || process.env.VERCEL_ENV || (process.env.OPENAI_API_KEY && !fs.existsSync(path.join(__dirname, 'vercel-env.txt')))) {
   console.log('🔐 Vercel ortamı tespit edildi - Environment variable\'lar otomatik yüklenecek');
-  console.log('✅ OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? 'Yüklendi' : 'Yüklenmedi');
+  console.log('✅ OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? `Yüklendi (${process.env.OPENAI_API_KEY.substring(0, 20)}...)` : 'Yüklenmedi');
+  if (!process.env.OPENAI_API_KEY) {
+    console.log('⚠️  UYARI: OPENAI_API_KEY Vercel environment variable\'larında bulunamadı!');
+    console.log('💡 Lütfen Vercel Dashboard\'da Settings → Environment Variables\'dan kontrol edin.');
+  }
+  // Vercel'de .env.local oluşturmaya gerek yok, environment variable'lar zaten yüklü
   process.exit(0);
 }
 

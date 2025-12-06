@@ -39,8 +39,9 @@
 
 **Key'iniz şu formatta olmalı:**
 ```
-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
+sk-proj-... (örnek format)
 ```
+**Not:** Gerçek key'i buraya yazmayın! Sadece Vercel Dashboard'da saklayın.
 
 **Kontrol:**
 - ✅ `sk-` ile başlıyor mu?

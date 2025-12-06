@@ -36,6 +36,10 @@ vercel-env.txt
 ENV_LOCAL_OLUSTUR.bat
 ENV_LOCAL_OLUSTUR.ps1
 
+# Script files with API keys (security)
+docs/TAM_OTOMATIK_DEPLOY.ps1
+docs/VERCEL_ENV_ADD.ps1
+
 # vercel
 .vercel
 

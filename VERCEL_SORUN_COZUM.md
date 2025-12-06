@@ -35,7 +35,7 @@ Localhost'ta çalışıyor ama Vercel'de çalışmıyor. Bu genellikle şu neden
 2. **"Add New"** ile yeniden ekleyin
 3. Key'i **manuel olarak yazın** (kopyala-yapıştır yerine dikkatli yazın):
    ```
-   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
+   BURAYA_OPENAI_API_KEY_YAZIN (gerçek key'i Vercel Dashboard'dan kopyalayın)
    ```
 4. **Environments:** Production, Preview, Development (hepsini seçin)
 5. **Save**

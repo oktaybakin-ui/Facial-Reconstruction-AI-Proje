@@ -17,7 +17,7 @@
 4. **Yeni variable ekleyin**
    - **"Add New"** butonuna tıklayın
    - **Key:** `OPENAI_API_KEY`
-   - **Value:** `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`
+   - **Value:** `BURAYA_OPENAI_API_KEY_YAZIN` (gerçek key'i Vercel Dashboard'dan kopyalayın)
    - **Environments:** Tümünü seçin (Production, Preview, Development)
    - **"Save"** tıklayın
 

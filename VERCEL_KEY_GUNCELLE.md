@@ -27,7 +27,7 @@ Bu, key'in yerel ortamda doğru olduğunu ama Vercel'de güncellenmediğini gös
 **Eski key'i silin ve yeni key'i yapıştırın:**
 
 ```
-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
+BURAYA_OPENAI_API_KEY_YAZIN (gerçek key'i Vercel Dashboard'dan kopyalayın)
 ```
 
 **Önemli:**
