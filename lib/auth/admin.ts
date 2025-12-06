@@ -6,10 +6,12 @@
 // Server-side: use ADMIN_EMAILS
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(email => email.trim().toLowerCase()).filter(Boolean);
 
-// Client-side: use NEXT_PUBLIC_ADMIN_EMAILS
-const PUBLIC_ADMIN_EMAILS = (typeof window !== 'undefined' 
-  ? (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '')
-  : (process.env.ADMIN_EMAILS || '')
+// Client-side: use NEXT_PUBLIC_ADMIN_EMAILS (fallback to ADMIN_EMAILS for build-time)
+// Note: NEXT_PUBLIC_* variables are embedded at build time, so they must be set in Vercel
+const PUBLIC_ADMIN_EMAILS = (
+  process.env.NEXT_PUBLIC_ADMIN_EMAILS || 
+  process.env.ADMIN_EMAILS || 
+  ''
 ).split(',').map(email => email.trim().toLowerCase()).filter(Boolean);
 
 /**

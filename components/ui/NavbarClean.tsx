@@ -24,12 +24,29 @@ export function NavbarClean() {
     checkUser();
     
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         setUser(session.user);
-        const adminStatus = isAdmin(session.user.email || '');
-        setIsAdminUser(adminStatus);
-        console.log('Auth state changed - User:', session.user.email, 'Is Admin:', adminStatus);
+        
+        // Check admin status via API (more reliable in production)
+        try {
+          const response = await fetch(`/api/admin/check?email=${encodeURIComponent(session.user.email || '')}`);
+          if (response.ok) {
+            const data = await response.json();
+            setIsAdminUser(data.isAdmin || false);
+            console.log('Auth state changed - User:', session.user.email, 'Is Admin:', data.isAdmin);
+          } else {
+            // Fallback to client-side check
+            const adminStatus = isAdmin(session.user.email || '');
+            setIsAdminUser(adminStatus);
+            console.log('Auth state changed (fallback) - User:', session.user.email, 'Is Admin:', adminStatus);
+          }
+        } catch (apiError) {
+          // Fallback to client-side check if API fails
+          const adminStatus = isAdmin(session.user.email || '');
+          setIsAdminUser(adminStatus);
+          console.log('Auth state changed (fallback) - User:', session.user.email, 'Is Admin:', adminStatus);
+        }
       } else {
         setUser(null);
         setIsAdminUser(false);
@@ -45,9 +62,26 @@ export function NavbarClean() {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (currentUser) {
         setUser(currentUser);
-        const adminStatus = isAdmin(currentUser.email || '');
-        setIsAdminUser(adminStatus);
-        console.log('User check - Email:', currentUser.email, 'Is Admin:', adminStatus);
+        
+        // Check admin status via API (more reliable in production)
+        try {
+          const response = await fetch(`/api/admin/check?email=${encodeURIComponent(currentUser.email || '')}`);
+          if (response.ok) {
+            const data = await response.json();
+            setIsAdminUser(data.isAdmin || false);
+            console.log('User check - Email:', currentUser.email, 'Is Admin:', data.isAdmin);
+          } else {
+            // Fallback to client-side check
+            const adminStatus = isAdmin(currentUser.email || '');
+            setIsAdminUser(adminStatus);
+            console.log('User check (fallback) - Email:', currentUser.email, 'Is Admin:', adminStatus);
+          }
+        } catch (apiError) {
+          // Fallback to client-side check if API fails
+          const adminStatus = isAdmin(currentUser.email || '');
+          setIsAdminUser(adminStatus);
+          console.log('User check (fallback) - Email:', currentUser.email, 'Is Admin:', adminStatus);
+        }
       }
     } catch (error) {
       console.error('Error checking user:', error);
