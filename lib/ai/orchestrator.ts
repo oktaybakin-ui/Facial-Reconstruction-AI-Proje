@@ -1,3 +1,5 @@
+'use server';
+
 import { createServerClient } from '@/lib/supabaseClient';
 import { analyzeVision } from './vision';
 import { suggestFlaps } from './decision';

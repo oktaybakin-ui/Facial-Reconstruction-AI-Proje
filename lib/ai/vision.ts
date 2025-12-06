@@ -1,3 +1,5 @@
+'use server';
+
 import { openai } from '@/lib/openai';
 import type { VisionSummary } from '@/types/ai';
 import type { Case } from '@/types/cases';

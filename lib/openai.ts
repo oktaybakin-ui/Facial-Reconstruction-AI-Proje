@@ -1,3 +1,5 @@
+'use server';
+
 // lib/openai.ts (sadece server'da import edeceğin dosya olsun)
 
 import OpenAI from "openai";
