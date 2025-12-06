@@ -14,7 +14,7 @@ export async function POST(
     
     console.log('AI Analyze endpoint called for case:', caseId);
     console.log('Raw params:', params);
-    console.log('Resolved params:', resolvedParams);
+    console.log('Resolved caseId:', caseId);
     
     const body = await request.json();
     const userId = body.user_id;
