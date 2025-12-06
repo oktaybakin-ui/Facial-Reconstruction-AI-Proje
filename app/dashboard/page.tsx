@@ -45,6 +45,36 @@ export default function DashboardPage() {
         return;
       }
 
+      // Check if user is banned
+      const isBanned = profileData.is_banned ?? false;
+      let banActive = isBanned;
+      
+      if (isBanned && profileData.banned_until) {
+        const banUntilDate = new Date(profileData.banned_until);
+        const now = new Date();
+        if (now > banUntilDate) {
+          // Ban expired, update database
+          await supabase
+            .from('user_profiles')
+            .update({ 
+              is_banned: false, 
+              ban_reason: null, 
+              banned_at: null, 
+              banned_until: null,
+              banned_by: null 
+            })
+            .eq('id', session.user.id);
+          banActive = false;
+        }
+      }
+
+      if (banActive) {
+        setError(profileData.ban_reason || 'Hesabınız yasaklanmıştır. Lütfen yönetici ile iletişime geçin.');
+        await supabase.auth.signOut();
+        setLoading(false);
+        return;
+      }
+
       console.log('Profile found, verified:', profileData.is_verified);
       setProfile(profileData);
     } catch (err: any) {

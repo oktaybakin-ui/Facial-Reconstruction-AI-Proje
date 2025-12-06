@@ -30,14 +30,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user is verified
+    // Check if user is verified and not banned
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('is_verified')
+      .select('is_verified, is_banned, ban_reason, banned_until')
       .eq('id', data.user.id)
       .single();
 
     const isVerified = profile?.is_verified ?? false;
+    const isBanned = profile?.is_banned ?? false;
+    
+    // Check if temporary ban has expired
+    let banActive = isBanned;
+    if (isBanned && profile?.banned_until) {
+      const banUntilDate = new Date(profile.banned_until);
+      const now = new Date();
+      if (now > banUntilDate) {
+        // Ban expired, update database
+        await supabase
+          .from('user_profiles')
+          .update({ 
+            is_banned: false, 
+            ban_reason: null, 
+            banned_at: null, 
+            banned_until: null,
+            banned_by: null 
+          })
+          .eq('id', data.user.id);
+        banActive = false;
+      }
+    }
+
+    if (banActive) {
+      return NextResponse.json(
+        {
+          error: profile?.ban_reason || 'Hesabınız yasaklanmıştır. Lütfen yönetici ile iletişime geçin.',
+          is_banned: true,
+          banned_until: profile?.banned_until || null,
+        },
+        { status: 403 }
+      );
+    }
 
     return NextResponse.json(
       {

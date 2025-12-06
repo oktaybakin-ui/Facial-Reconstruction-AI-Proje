@@ -64,6 +64,10 @@ export async function GET(request: NextRequest) {
         is_verified: profile.is_verified || false,
         created_at: profile.created_at,
         institution_name: profile.institution_name || 'N/A',
+        is_banned: profile.is_banned || false,
+        ban_reason: profile.ban_reason || null,
+        banned_at: profile.banned_at || null,
+        banned_until: profile.banned_until || null,
       };
     });
 

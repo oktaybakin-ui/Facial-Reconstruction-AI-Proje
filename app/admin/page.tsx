@@ -16,6 +16,10 @@ interface User {
   is_verified: boolean;
   created_at: string;
   institution_name: string;
+  is_banned?: boolean;
+  ban_reason?: string;
+  banned_at?: string;
+  banned_until?: string;
 }
 
 export default function AdminPage() {
@@ -29,6 +33,10 @@ export default function AdminPage() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [autoApproveEnabled, setAutoApproveEnabled] = useState(false);
+  const [banningUser, setBanningUser] = useState<string | null>(null);
+  const [showBanModal, setShowBanModal] = useState<{ userId: string; userName: string } | null>(null);
+  const [banReason, setBanReason] = useState('');
+  const [banUntil, setBanUntil] = useState('');
 
   useEffect(() => {
     checkAdminAndLoadUsers();
@@ -261,6 +269,94 @@ export default function AdminPage() {
     });
   };
 
+  const handleBan = async (userId: string, userName: string) => {
+    setShowBanModal({ userId, userName });
+  };
+
+  const handleUnban = async (userId: string) => {
+    const confirmed = await confirm({
+      title: 'Yasak Kaldır',
+      message: 'Bu kullanıcının yasağını kaldırmak istediğinize emin misiniz?',
+      confirmText: 'Yasak Kaldır',
+      cancelText: 'İptal',
+    });
+
+    if (!confirmed) return;
+
+    setUpdating(userId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        showError('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+        return;
+      }
+
+      const response = await fetch(`/api/admin/users/${userId}/unban`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Yasak kaldırılamadı');
+      }
+
+      success('Kullanıcı yasağı kaldırıldı');
+      await loadUsers();
+    } catch (error: unknown) {
+      logger.error('Error unbanning user:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Yasak kaldırılamadı';
+      showError(errorMessage);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const confirmBan = async () => {
+    if (!showBanModal) return;
+
+    const { userId } = showBanModal;
+    setBanningUser(userId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        showError('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+        return;
+      }
+
+      const response = await fetch(`/api/admin/users/${userId}/ban`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reason: banReason || 'Yönetici tarafından yasaklandı',
+          banUntil: banUntil || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Kullanıcı yasaklanamadı');
+      }
+
+      success(banUntil ? 'Kullanıcı geçici olarak yasaklandı' : 'Kullanıcı yasaklandı');
+      setShowBanModal(null);
+      setBanReason('');
+      setBanUntil('');
+      await loadUsers();
+    } catch (error: unknown) {
+      logger.error('Error banning user:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Kullanıcı yasaklanamadı';
+      showError(errorMessage);
+    } finally {
+      setBanningUser(null);
+    }
+  };
+
   const toggleAutoApprove = async (newValue: boolean) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -469,18 +565,54 @@ export default function AdminPage() {
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Ad Soyad</th>
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Branş</th>
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Kurum</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Durum</th>
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Kayıt Tarihi</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">İşlemler</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {approvedUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
+                    <tr key={user.id} className={`hover:bg-gray-50 ${user.is_banned ? 'bg-red-50' : ''}`}>
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">{user.email}</td>
                       <td className="px-6 py-4 text-sm text-gray-700">{user.full_name}</td>
                       <td className="px-6 py-4 text-sm text-gray-700">{user.specialty}</td>
                       <td className="px-6 py-4 text-sm text-gray-700">{user.institution_name}</td>
+                      <td className="px-6 py-4 text-sm">
+                        {user.is_banned ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            🚫 Yasaklı
+                            {user.banned_until && (
+                              <span className="ml-1 text-red-600">
+                                ({new Date(user.banned_until).toLocaleDateString('tr-TR')} kadar)
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            ✅ Aktif
+                          </span>
+                        )}
+                      </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {new Date(user.created_at).toLocaleDateString('tr-TR')}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        {user.is_banned ? (
+                          <button
+                            onClick={() => handleUnban(user.id)}
+                            disabled={updating === user.id}
+                            className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-semibold text-sm disabled:opacity-50"
+                          >
+                            {updating === user.id ? 'Kaldırılıyor...' : 'Yasak Kaldır'}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleBan(user.id, user.full_name)}
+                            className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-semibold text-sm"
+                          >
+                            🚫 Yasakla
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -489,6 +621,70 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+
+        {/* Ban Modal */}
+        {showBanModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                Kullanıcıyı Yasakla
+              </h3>
+              <p className="text-gray-600 mb-6">
+                <strong>{showBanModal.userName}</strong> kullanıcısını yasaklamak istediğinize emin misiniz?
+              </p>
+              
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Yasaklama Nedeni
+                  </label>
+                  <textarea
+                    value={banReason}
+                    onChange={(e) => setBanReason(e.target.value)}
+                    placeholder="Yasaklama nedenini girin..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    rows={3}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Geçici Yasak (Opsiyonel)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={banUntil}
+                    onChange={(e) => setBanUntil(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Boş bırakırsanız kalıcı yasak uygulanır
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowBanModal(null);
+                    setBanReason('');
+                    setBanUntil('');
+                  }}
+                  className="flex-1 px-5 py-2.5 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors font-semibold"
+                >
+                  İptal
+                </button>
+                <button
+                  onClick={confirmBan}
+                  disabled={banningUser === showBanModal.userId}
+                  className="flex-1 px-5 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-semibold disabled:opacity-50"
+                >
+                  {banningUser === showBanModal.userId ? 'Yasaklanıyor...' : 'Yasakla'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
