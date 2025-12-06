@@ -1,10 +1,6 @@
-import OpenAI from 'openai';
+import { openai } from '@/lib/openai';
 import type { FlapSuggestion, VisionSummary } from '@/types/ai';
 import type { Case } from '@/types/cases';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 const SYSTEM_PROMPT = `Sen yüz bölgesi cilt defektleri için rekonstrüksiyon karar destek asistanısın.
 Hasta metadata'sı ve görüntü analizi özeti alıyorsun.

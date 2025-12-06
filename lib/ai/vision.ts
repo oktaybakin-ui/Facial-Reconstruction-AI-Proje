@@ -1,10 +1,6 @@
-import OpenAI from 'openai';
+import { openai } from '@/lib/openai';
 import type { VisionSummary } from '@/types/ai';
 import type { Case } from '@/types/cases';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 const SYSTEM_PROMPT = `You are a medical-grade computer vision assistant.
 Input: a pre-operative clinical photograph of a facial skin defect after tumor excision, plus structured metadata.
