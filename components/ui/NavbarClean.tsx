@@ -18,6 +18,7 @@ export function NavbarClean() {
   const [user, setUser] = useState<any>(null);
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -67,11 +68,11 @@ export function NavbarClean() {
 
   return (
     <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-black/5 shadow-sm">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="flex items-center justify-between h-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="flex items-center justify-between h-16 sm:h-20">
           {/* Logo */}
-          <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-3 group">
-            <div className="relative w-12 h-12 flex items-center justify-center">
+          <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2 sm:gap-3 group">
+            <div className="relative w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center">
               <Image
                 src="/logo.png"
                 alt="Team Logo"
@@ -82,57 +83,126 @@ export function NavbarClean() {
               />
             </div>
             <div className="flex flex-col">
-              <span className="text-lg font-bold text-black/90 group-hover:text-black transition-colors">
+              <span className="text-base sm:text-lg font-bold text-black/90 group-hover:text-black transition-colors">
                 {t('app.name')}
               </span>
-              <span className="text-xs text-black/40 -mt-0.5">FaceTech Fusion</span>
+              <span className="text-[10px] sm:text-xs text-black/40 -mt-0.5 hidden sm:block">FaceTech Fusion</span>
             </div>
           </Link>
           
-          {/* Right Side */}
-          <div className="flex items-center gap-4">
+          {/* Desktop Menu */}
+          <div className="hidden md:flex items-center gap-4">
             <LanguageSelector />
             {loading ? (
               <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
             ) : user ? (
               <>
                 <Link href="/knowledge-base">
-                  <Button variant="ghost" size="md" className="font-medium">
-                    📚 Bilgi Tabanı
+                  <Button variant="ghost" size="md" className="font-medium text-sm">
+                    📚 {t('nav.knowledgeBase')}
                   </Button>
                 </Link>
                 <Link href="/cases/new">
-                  <Button variant="secondary" size="md" className="font-medium">
-                    ➕ Yeni Olgu
+                  <Button variant="secondary" size="md" className="font-medium text-sm">
+                    ➕ {t('nav.newCase')}
                   </Button>
                 </Link>
                 {isAdminUser && (
                   <Link href="/admin">
-                    <Button variant="secondary" size="md" className="font-medium">
-                      ⚙️ Yönetici
+                    <Button variant="secondary" size="md" className="font-medium text-sm">
+                      ⚙️ {t('nav.adminPanel')}
                     </Button>
                   </Link>
                 )}
-                <Button variant="ghost" size="md" onClick={handleSignOut} className="font-medium">
-                  Çıkış
+                <Button variant="ghost" size="md" onClick={handleSignOut} className="font-medium text-sm">
+                  {t('nav.signOut')}
                 </Button>
               </>
             ) : (
               <>
                 <Link href="/auth/login">
-                  <Button variant="ghost" size="md" className="font-medium">
+                  <Button variant="ghost" size="md" className="font-medium text-sm">
                     {t('nav.signIn')}
                   </Button>
                 </Link>
                 <Link href="/auth/register">
-                  <Button size="md" className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all duration-300">
+                  <Button size="md" className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all duration-300 text-sm">
                     {t('nav.getStarted')}
                   </Button>
                 </Link>
               </>
             )}
           </div>
+
+          {/* Mobile Menu Button */}
+          <div className="md:hidden flex items-center gap-2">
+            <LanguageSelector />
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 rounded-lg text-black/70 hover:bg-black/5 transition-colors"
+              aria-label="Menu"
+            >
+              {mobileMenuOpen ? (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-black/5 bg-white/95 backdrop-blur-xl">
+            <div className="px-4 py-4 space-y-2">
+              {loading ? (
+                <div className="flex justify-center py-4">
+                  <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : user ? (
+                <>
+                  <Link href="/knowledge-base" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="ghost" size="md" className="w-full justify-start font-medium">
+                      📚 {t('nav.knowledgeBase')}
+                    </Button>
+                  </Link>
+                  <Link href="/cases/new" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="secondary" size="md" className="w-full justify-start font-medium">
+                      ➕ {t('nav.newCase')}
+                    </Button>
+                  </Link>
+                  {isAdminUser && (
+                    <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>
+                      <Button variant="secondary" size="md" className="w-full justify-start font-medium">
+                        ⚙️ {t('nav.adminPanel')}
+                      </Button>
+                    </Link>
+                  )}
+                  <Button variant="ghost" size="md" onClick={() => { handleSignOut(); setMobileMenuOpen(false); }} className="w-full justify-start font-medium">
+                    {t('nav.signOut')}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="ghost" size="md" className="w-full justify-start font-medium">
+                      {t('nav.signIn')}
+                    </Button>
+                  </Link>
+                  <Link href="/auth/register" onClick={() => setMobileMenuOpen(false)}>
+                    <Button size="md" className="w-full justify-start font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md">
+                      {t('nav.getStarted')}
+                    </Button>
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   );

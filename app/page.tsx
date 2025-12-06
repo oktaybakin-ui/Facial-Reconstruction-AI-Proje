@@ -20,8 +20,8 @@ export default function Home() {
       <PageContainer>
         <HeroApple />
 
-        <section className="max-w-6xl mx-auto px-6 pb-20">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-20">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-10">
             <Stat value={t('stats.ai')} label={t('stats.aiDesc')} color="text-blue-600" />
             <Stat value={t('stats.secure')} label={t('stats.secureDesc')} color="text-green-600" />
             <Stat value={t('stats.accessible')} label={t('stats.accessibleDesc')} color="text-purple-600" />
@@ -31,8 +31,8 @@ export default function Home() {
           <ImportantNoticeCard />
         </section>
 
-        <footer className="bg-white/80 backdrop-blur-sm border-t border-black/5 py-10 mt-20">
-          <div className="max-w-6xl mx-auto px-6 text-center">
+        <footer className="bg-white/80 backdrop-blur-sm border-t border-black/5 py-8 sm:py-10 mt-20">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 text-center">
             <p className="text-sm text-black/45">{t('footer.copyright2')}</p>
             <p className="mt-1 text-xs text-black/40">
               {t('footer.disclaimer')}
@@ -46,9 +46,9 @@ export default function Home() {
 
 function Stat({ value, label, color }: { value: string; label: string; color: string }) {
   return (
-    <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-black/5 shadow-lg hover:shadow-xl transition-all duration-300 text-center hover:-translate-y-1">
-      <div className={`text-3xl font-semibold mb-2 tracking-tight ${color}`}>{value}</div>
-      <div className="text-xs text-black/50 font-medium">{label}</div>
+    <div className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-black/5 shadow-lg hover:shadow-xl transition-all duration-300 text-center hover:-translate-y-1">
+      <div className={`text-2xl sm:text-3xl font-semibold mb-1 sm:mb-2 tracking-tight ${color}`}>{value}</div>
+      <div className="text-[10px] sm:text-xs text-black/50 font-medium">{label}</div>
     </div>
   );
 }

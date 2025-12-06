@@ -9,7 +9,7 @@ export function HeroApple() {
   const { t } = useI18n();
 
   return (
-    <section className="relative max-w-7xl mx-auto px-6 pt-24 pb-20 md:pt-32 md:pb-28">
+    <section className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-20 sm:pt-24 pb-16 sm:pb-20 md:pt-32 md:pb-28">
       {/* Background Gradient Blobs */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-gradient-to-br from-blue-200/40 to-purple-200/40 blur-3xl animate-pulse"></div>
@@ -63,8 +63,8 @@ export function HeroApple() {
       </div>
 
       {/* Video Section - Pre-op Yükleme'nin üstünde */}
-      <div className="mt-24 mb-16 flex justify-center">
-        <div className="w-full max-w-2xl">
+      <div className="mt-16 sm:mt-24 mb-12 sm:mb-16 flex justify-center">
+        <div className="w-full max-w-2xl px-2 sm:px-0">
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl border border-black/5 shadow-xl overflow-hidden">
             <div className="aspect-video relative">
               <video
