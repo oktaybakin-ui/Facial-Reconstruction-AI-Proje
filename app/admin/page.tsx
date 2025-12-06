@@ -43,14 +43,40 @@ export default function AdminPage() {
         return;
       }
 
-      if (!isAdmin(user.email)) {
-        showError('Bu sayfaya erişim yetkiniz yok');
-        router.push('/dashboard');
-        return;
-      }
+      // Check admin status via API (more reliable in production)
+      try {
+        const response = await fetch(`/api/admin/check?email=${encodeURIComponent(user.email)}`);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Admin kontrolü başarısız');
+        }
+        const data = await response.json();
+        
+        logger.info('Admin check result:', { email: user.email, isAdmin: data.isAdmin });
+        
+        if (!data.isAdmin) {
+          showError(`Bu sayfaya erişim yetkiniz yok. Email: ${user.email}`);
+          logger.warn('Admin access denied:', { email: user.email, response: data });
+          router.push('/dashboard');
+          return;
+        }
 
-      setIsAdminUser(true);
-      await loadUsers();
+        setIsAdminUser(true);
+        await loadUsers();
+      } catch (apiError: any) {
+        // Fallback to client-side check if API fails
+        logger.warn('API admin check failed, using fallback:', apiError);
+        const fallbackAdminStatus = isAdmin(user.email);
+        logger.info('Fallback admin check:', { email: user.email, isAdmin: fallbackAdminStatus });
+        
+        if (!fallbackAdminStatus) {
+          showError(`Bu sayfaya erişim yetkiniz yok. Email: ${user.email}. Lütfen Vercel'de ADMIN_EMAILS environment variable'ını kontrol edin.`);
+          router.push('/dashboard');
+          return;
+        }
+        setIsAdminUser(true);
+        await loadUsers();
+      }
     } catch (error: unknown) {
       logger.error('Error checking admin:', error);
       showError('Bir hata oluştu');
