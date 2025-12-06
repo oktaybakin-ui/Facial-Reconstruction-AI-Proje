@@ -62,8 +62,30 @@ export function HeroApple() {
         </div>
       </div>
 
+      {/* Video Section - Pre-op Yükleme'nin üstünde */}
+      <div className="mt-24 mb-16 flex justify-center">
+        <div className="w-full max-w-2xl">
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl border border-black/5 shadow-xl overflow-hidden">
+            <div className="aspect-video relative">
+              <video
+                src="/videos/face.mp4"
+                controls
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+                preload="auto"
+              >
+                Tarayıcınız video oynatmayı desteklemiyor.
+              </video>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Feature Cards */}
-      <div className="mt-32 grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
         <FeatureCardApple
           icon="📸"
           iconColor="bg-blue-50"

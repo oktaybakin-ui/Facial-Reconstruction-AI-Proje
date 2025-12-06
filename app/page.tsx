@@ -52,3 +52,4 @@ function Stat({ value, label, color }: { value: string; label: string; color: st
     </div>
   );
 }
+
