@@ -1,8 +1,16 @@
 // Otomatik .env.local dosyası oluşturma scripti
 // Bu script vercel-env.txt dosyasından key'leri okuyup .env.local oluşturur
+// Vercel'de environment variable'lar otomatik yüklendiği için bu script sadece localhost için çalışır
 
 const fs = require('fs');
 const path = require('path');
+
+// Vercel'de çalışıyorsak, environment variable'lar zaten yüklü, script'e gerek yok
+if (process.env.VERCEL) {
+  console.log('🔐 Vercel ortamı tespit edildi - Environment variable\'lar otomatik yüklenecek');
+  console.log('✅ OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? 'Yüklendi' : 'Yüklenmedi');
+  process.exit(0);
+}
 
 const projectPath = __dirname;
 const envSourceFile = path.join(projectPath, 'vercel-env.txt');
