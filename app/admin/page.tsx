@@ -161,7 +161,10 @@ export default function AdminPage() {
     setUpdating(userId);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) {
+        showError('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+        return;
+      }
 
       const response = await fetch(`/api/admin/users/${userId}/approve`, {
         method: 'POST',
@@ -171,14 +174,20 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Onaylama başarısız');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || errorData.details || 'Onaylama başarısız';
+        logger.error('Approve user failed:', { status: response.status, error: errorData });
+        throw new Error(errorMessage);
       }
 
+      const data = await response.json();
+      logger.info('User approved successfully:', { userId, user: data.user });
       success('Kullanıcı onaylandı');
       await loadUsers();
     } catch (error: unknown) {
       logger.error('Error approving user:', error);
-      showError('Kullanıcı onaylanamadı');
+      const errorMessage = error instanceof Error ? error.message : 'Kullanıcı onaylanamadı';
+      showError(errorMessage);
     } finally {
       setUpdating(null);
     }

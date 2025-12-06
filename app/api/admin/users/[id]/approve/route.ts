@@ -4,6 +4,7 @@ import { isAdmin } from '@/lib/auth/admin';
 import { logger } from '@/lib/utils/logger';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function POST(
   request: NextRequest,
@@ -29,7 +30,9 @@ export async function POST(
       return NextResponse.json({ error: 'Yetkiniz yok' }, { status: 403 });
     }
 
-    const { data, error } = await supabase
+    // Use service role key to bypass RLS
+    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data, error } = await adminSupabase
       .from('user_profiles')
       .update({ is_verified: true })
       .eq('id', userId)
@@ -37,13 +40,17 @@ export async function POST(
       .single();
 
     if (error) {
-      logger.error('Error approving user:', error);
-      return NextResponse.json({ error: 'Kullanıcı onaylanamadı' }, { status: 500 });
+      logger?.error?.('Error approving user:', error);
+      return NextResponse.json({ 
+        error: 'Kullanıcı onaylanamadı', 
+        details: error.message 
+      }, { status: 500 });
     }
 
+    logger?.info?.('User approved:', { userId, email: data?.email });
     return NextResponse.json({ success: true, user: data }, { status: 200 });
   } catch (error: unknown) {
-    logger.error('Error in approve user route:', error);
+    logger?.error?.('Error in approve user route:', error);
     const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
