@@ -233,11 +233,34 @@ export async function analyzeVision(
     console.error('Vision analysis error:', error);
     console.error('Error details:', {
       message: error?.message,
+      status: error?.status,
+      statusCode: error?.statusCode,
       stack: error?.stack,
       response: error?.response,
     });
+    
+    // Handle OpenAI API key errors specifically
+    const errorMessage = error?.message || '';
+    const errorStatus = error?.status || error?.statusCode;
+    
+    if (errorStatus === 401 || errorMessage.includes('Incorrect API key') || errorMessage.includes('401')) {
+      throw new Error(
+        'OpenAI API key geçersiz veya eksik. ' +
+        'Lütfen Vercel Dashboard\'da OPENAI_API_KEY environment variable\'ını kontrol edin. ' +
+        'API key\'inizi https://platform.openai.com/account/api-keys adresinden alabilirsiniz.'
+      );
+    }
+    
+    // Handle quota/rate limit errors
+    if (errorStatus === 429 || errorMessage.includes('quota') || errorMessage.includes('rate limit')) {
+      throw new Error(
+        'OpenAI API quota/rate limit aşıldı. ' +
+        'Lütfen https://platform.openai.com/account/billing adresinden quota durumunuzu kontrol edin.'
+      );
+    }
+    
     // Re-throw error instead of returning fallback so orchestrator can handle it properly
-    throw new Error(`Görüntü analizi başarısız: ${error?.message || 'Bilinmeyen hata'}`);
+    throw new Error(`Görüntü analizi başarısız: ${errorMessage || 'Bilinmeyen hata'}`);
   }
 }
 

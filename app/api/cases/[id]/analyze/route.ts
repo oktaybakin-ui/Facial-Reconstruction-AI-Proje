@@ -61,7 +61,14 @@ export async function POST(
     let errorMessage = error.message || 'AI analizi başarısız';
     let hint = undefined;
     
-    if (error.message?.includes('Olgu bulunamadı') || error.message?.includes('Case not found') || error.message?.includes('not found')) {
+    // Check for OpenAI API key errors
+    if (error.message?.includes('OpenAI API key') || error.message?.includes('Incorrect API key') || error.message?.includes('401')) {
+      errorMessage = 'OpenAI API key geçersiz veya eksik. Lütfen Vercel Dashboard\'da OPENAI_API_KEY environment variable\'ını kontrol edin.';
+      hint = 'API key\'inizi https://platform.openai.com/account/api-keys adresinden alabilirsiniz.';
+    } else if (error.message?.includes('quota') || error.message?.includes('rate limit') || error.message?.includes('429')) {
+      errorMessage = 'OpenAI API quota/rate limit aşıldı.';
+      hint = 'Lütfen https://platform.openai.com/account/billing adresinden quota durumunuzu kontrol edin.';
+    } else if (error.message?.includes('Olgu bulunamadı') || error.message?.includes('Case not found') || error.message?.includes('not found')) {
       errorMessage = 'Olgu bulunamadı. Lütfen sayfayı yenileyip tekrar deneyin.';
       hint = caseId ? `Aranan Case ID: ${caseId}` : 'Case ID bulunamadı';
     } else if (error.message?.includes('photo') || error.message?.includes('Pre-op')) {
