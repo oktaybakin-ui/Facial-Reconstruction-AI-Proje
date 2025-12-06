@@ -94,6 +94,7 @@ export default function AdminPage() {
         return;
       }
 
+      logger.info('Loading users...');
       const response = await fetch('/api/admin/users', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -101,14 +102,22 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Kullanıcılar alınamadı');
+        const errorData = await response.json().catch(() => ({}));
+        logger.error('Failed to load users:', { status: response.status, error: errorData });
+        throw new Error(errorData.error || 'Kullanıcılar alınamadı');
       }
 
       const data = await response.json();
+      logger.info('Users loaded:', { count: data.users?.length || 0 });
       setUsers(data.users || []);
+      
+      if (!data.users || data.users.length === 0) {
+        logger.warn('No users found in database');
+      }
     } catch (error: unknown) {
       logger.error('Error loading users:', error);
-      showError('Kullanıcılar yüklenemedi');
+      const errorMessage = error instanceof Error ? error.message : 'Kullanıcılar yüklenemedi';
+      showError(errorMessage);
     }
   };
 
@@ -290,17 +299,27 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8 flex justify-between items-center">
+        <div className="mb-8 flex justify-between items-center flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Yönetici Paneli</h1>
             <p className="text-gray-600">Kullanıcıları yönetin ve onaylayın</p>
+            <p className="text-sm text-gray-500 mt-1">Toplam: {users.length} kullanıcı | Bekleyen: {pendingUsers.length}</p>
           </div>
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-2xl hover:bg-gray-300 transition-colors font-semibold"
-          >
-            ← Dashboard'a Dön
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={loadUsers}
+              disabled={loading}
+              className="px-5 py-2.5 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              🔄 Yenile
+            </button>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-2xl hover:bg-gray-300 transition-colors font-semibold"
+            >
+              ← Dashboard'a Dön
+            </button>
+          </div>
         </div>
 
         {/* Auto Approve Toggle */}

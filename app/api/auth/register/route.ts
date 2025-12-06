@@ -45,7 +45,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user profile
-    const { error: profileError } = await supabase
+    console.log('Creating user profile for:', authData.user.id, authData.user.email);
+    const { data: profileData, error: profileError } = await supabase
       .from('user_profiles')
       .insert({
         id: authData.user.id,
@@ -58,9 +59,11 @@ export async function POST(request: NextRequest) {
         role: 'physician',
         is_verified: false, // Will be verified by admin
         institution_id_card_url: institutionCardUrl,
-      });
+      })
+      .select();
 
     if (profileError) {
+      console.error('Profile creation error:', profileError);
       // Cleanup: delete auth user if profile creation fails
       await supabase.auth.admin.deleteUser(authData.user.id);
       return NextResponse.json(
@@ -68,6 +71,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    console.log('User profile created successfully:', profileData);
 
     return NextResponse.json(
       {
