@@ -5,11 +5,10 @@ import { createCaseSchema } from '@/lib/validators';
 // GET - Get a specific case
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const resolvedParams = 'then' in params ? await params : params;
-    const caseId = resolvedParams.id;
+    const { id: caseId } = await params;
 
     const supabase = createServerClient();
     const { data: caseData, error } = await supabase
@@ -32,11 +31,10 @@ export async function GET(
 // PUT - Update a case
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const resolvedParams = 'then' in params ? await params : params;
-    const caseId = resolvedParams.id;
+    const { id: caseId } = await params;
     const body = await request.json();
     const { user_id, ...updateData } = body;
 
@@ -99,11 +97,10 @@ export async function PUT(
 // DELETE - Delete a case
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const resolvedParams = 'then' in params ? await params : params;
-    const caseId = resolvedParams.id;
+    const { id: caseId } = await params;
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get('user_id');
 

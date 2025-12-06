@@ -4,14 +4,13 @@ import { runCaseAnalysis } from '@/lib/ai/orchestrator';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   let caseId: string | undefined;
   
   try {
-    // Handle both sync and async params (Next.js 14/15 compatibility)
-    const resolvedParams = 'then' in params ? await params : params;
-    caseId = resolvedParams.id;
+    const { id } = await params;
+    caseId = id;
     
     console.log('AI Analyze endpoint called for case:', caseId);
     console.log('Raw params:', params);

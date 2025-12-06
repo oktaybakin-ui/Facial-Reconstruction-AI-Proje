@@ -7,9 +7,11 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: userId } = await params;
+
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
       return NextResponse.json({ error: 'Yetkilendirme gerekli' }, { status: 401 });
@@ -27,8 +29,6 @@ export async function POST(
       return NextResponse.json({ error: 'Yetkiniz yok' }, { status: 403 });
     }
 
-    const userId = params.id;
-
     const { data, error } = await supabase
       .from('user_profiles')
       .update({ is_verified: true })
@@ -37,13 +37,13 @@ export async function POST(
       .single();
 
     if (error) {
-      logger?.error?.('Error approving user:', error);
+      logger.error('Error approving user:', error);
       return NextResponse.json({ error: 'Kullanıcı onaylanamadı' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, user: data }, { status: 200 });
   } catch (error: unknown) {
-    logger?.error?.('Error in approve user route:', error);
+    logger.error('Error in approve user route:', error);
     const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }

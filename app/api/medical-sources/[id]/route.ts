@@ -5,11 +5,10 @@ import { requireAdmin } from '@/lib/auth/admin';
 // PUT - Update a medical source (ADMIN ONLY)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const resolvedParams = 'then' in params ? await params : params;
-    const sourceId = resolvedParams.id;
+    const { id: sourceId } = await params;
     const body = await request.json();
     const { user_id, user_email, ...updates } = body;
 
@@ -53,11 +52,10 @@ export async function PUT(
 // DELETE - Delete a medical source (soft delete) (ADMIN ONLY)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const resolvedParams = 'then' in params ? await params : params;
-    const sourceId = resolvedParams.id;
+    const { id: sourceId } = await params;
 
     // Get user email from query params
     const searchParams = request.nextUrl.searchParams;
