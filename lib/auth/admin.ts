@@ -3,14 +3,28 @@
  * Only specified admin emails can manage medical sources
  */
 
+// Server-side: use ADMIN_EMAILS
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(email => email.trim().toLowerCase()).filter(Boolean);
+
+// Client-side: use NEXT_PUBLIC_ADMIN_EMAILS
+const PUBLIC_ADMIN_EMAILS = (typeof window !== 'undefined' 
+  ? (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '')
+  : (process.env.ADMIN_EMAILS || '')
+).split(',').map(email => email.trim().toLowerCase()).filter(Boolean);
 
 /**
  * Check if a user is an admin based on their email
+ * Works both on server and client side
  */
 export function isAdmin(email: string | null | undefined): boolean {
   if (!email) return false;
-  return ADMIN_EMAILS.includes(email.toLowerCase());
+  const emailLower = email.toLowerCase();
+  
+  // Use public admin emails for client-side, regular for server-side
+  if (typeof window !== 'undefined') {
+    return PUBLIC_ADMIN_EMAILS.includes(emailLower);
+  }
+  return ADMIN_EMAILS.includes(emailLower);
 }
 
 /**

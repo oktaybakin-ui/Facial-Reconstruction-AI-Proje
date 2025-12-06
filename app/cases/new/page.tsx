@@ -264,7 +264,7 @@ export default function NewCasePage() {
                 <select
                   value={formData.sex}
                   onChange={(e) => setFormData({ ...formData, sex: e.target.value as Sex })}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  className="w-full px-4 py-2.5 bg-white/80 backdrop-blur-sm border border-black/10 rounded-xl text-black/80 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
                 >
                   <option value="">Seçiniz</option>
                   <option value="M">Erkek</option>
@@ -281,7 +281,7 @@ export default function NewCasePage() {
                   required
                   value={formData.region}
                   onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  className="w-full px-4 py-2.5 bg-white/80 backdrop-blur-sm border border-black/10 rounded-xl text-black/80 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
                 >
                   <option value="">Seçiniz</option>
                   {regions.map((region) => (
@@ -329,7 +329,7 @@ export default function NewCasePage() {
               <select
                 value={formData.depth}
                 onChange={(e) => setFormData({ ...formData, depth: e.target.value as DepthCategory })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2.5 bg-white/80 backdrop-blur-sm border border-black/10 rounded-xl text-black/80 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 <option value="">Seçiniz</option>
                 <option value="skin">Cilt</option>

@@ -1,0 +1,31 @@
+Vercel'e Eklenecek Environment Variables Listesi
+==================================================
+
+Aşağıdaki 5 environment variable'ı Vercel'e eklemeniz gerekiyor.
+Değerleri .env.local dosyanızdan kopyalayın.
+
+1. NEXT_PUBLIC_SUPABASE_URL
+   - .env.local dosyanızdan kopyalayın
+   - Örnek: https://xxxxx.supabase.co
+
+2. NEXT_PUBLIC_SUPABASE_ANON_KEY
+   - .env.local dosyanızdan kopyalayın
+   - Örnek: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+3. SUPABASE_SERVICE_ROLE_KEY
+   - .env.local dosyanızdan kopyalayın
+   - Örnek: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+4. OPENAI_API_KEY
+   - .env.local dosyanızdan kopyalayın
+   - Örnek: sk-...
+
+5. ANTHROPIC_API_KEY
+   - .env.local dosyanızdan kopyalayın
+   - Örnek: sk-ant-...
+
+ÖNEMLİ:
+- Her birini ekledikten sonra "Save" butonuna tıklayın
+- Environment seçeneklerinde Production, Preview, Development'ı işaretleyin
+- Tüm 5 variable'ı eklemeden deploy etmeyin!
+

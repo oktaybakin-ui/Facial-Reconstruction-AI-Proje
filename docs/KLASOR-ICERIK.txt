@@ -1,0 +1,101 @@
+================================================================================
+FACIAL RECONSTRUKSİYON AI - DOKÜMANTASYON KLASÖRÜ İÇERİĞİ
+================================================================================
+
+Bu klasör, Facial Reconstruction AI projesinin tüm dokümantasyonunu ve SQL 
+script dosyalarını içermektedir.
+
+================================================================================
+DOKÜMANTASYON DOSYALARI
+================================================================================
+
+1. README.md
+   - Klasör içeriği hakkında genel bilgi ve hızlı başlangıç kılavuzu
+
+2. PROJE-YOLCULUGU.md
+   - Projenin detaylı geliştirme süreci
+   - Her aşamada yapılan işler
+   - Özellik listesi ve teknoloji stack
+   - Kullanım senaryoları
+
+3. KURULUM-TALIMATLARI.md
+   - Adım adım kurulum kılavuzu
+   - Environment variables ayarlama
+   - Veritabanı kurulumu
+   - Troubleshooting rehberi
+   - Production deployment notları
+
+4. PROJE-DOSYALARI-LISTESI.md
+   - Proje dizin yapısı
+   - Önemli dosyaların listesi
+   - Bağımlılıklar ve veritabanı tabloları
+
+================================================================================
+SQL DOSYALARI (Sırasıyla Çalıştırılmalı)
+================================================================================
+
+İLK KURULUM:
+------------
+1. 001_initial_schema.sql veya 001_initial_schema_clean.sql
+   - Temel veritabanı şeması
+   - user_profiles, cases, case_photos, ai_results tabloları
+
+2. medical_knowledge_base_schema.sql
+   - Tıbbi bilgi tabanı tablosu (medical_sources)
+
+YENİ ÖZELLİKLER:
+----------------
+3. add_case_fields.sql
+   - Vaka bilgileri alanları (tarih, saat, süre, hasta özelliği)
+
+4. add_followup_fields.sql
+   - Operasyon ve takip bilgileri
+   - Patoloji takip alanları
+
+ÖRNEK VERİLER:
+--------------
+5. bulk_load_medical_sources.sql
+   - Örnek tıbbi kaynak verileri (test amaçlı)
+
+DÜZELTME DOSYALARI:
+-------------------
+- fix_*.sql dosyaları: Çeşitli düzeltmeler ve RLS politikaları
+- check_*.sql dosyaları: Veri kontrol sorguları
+- verify_user.sql: Kullanıcı doğrulama
+
+================================================================================
+SQL DOSYALARI ÇALIŞTIRMA SIRASI
+================================================================================
+
+YENİ KURULUM İÇİN:
+1. 001_initial_schema_clean.sql
+2. medical_knowledge_base_schema.sql
+3. add_case_fields.sql
+4. add_followup_fields.sql
+
+SADECE YENİ ÖZELLİKLER İÇİN (Veritabanı zaten kuruluysa):
+1. add_case_fields.sql
+2. add_followup_fields.sql
+
+================================================================================
+HIZLI BAŞLANGIÇ
+================================================================================
+
+1. PROJE-YOLCULUGU.md dosyasını okuyarak projeyi tanıyın
+2. KURULUM-TALIMATLARI.md dosyasını takip ederek kurulum yapın
+3. SQL dosyalarını Supabase Dashboard > SQL Editor'de sırasıyla çalıştırın
+
+================================================================================
+ÖNEMLİ NOTLAR
+================================================================================
+
+- SQL dosyalarını sırayla çalıştırın (bazıları diğerlerine bağımlıdır)
+- Production'da çalıştırmadan önce yedek alın
+- Environment variables (.env.local) dosyasını proje root dizininde oluşturun
+- API key'leri güvenli tutun
+
+================================================================================
+SON GÜNCELLEME: Aralık 2024
+PROJE VERSİYONU: 1.0.0
+================================================================================
+

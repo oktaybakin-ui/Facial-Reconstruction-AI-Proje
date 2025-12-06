@@ -1,0 +1,36 @@
+Vercel'e Eklenecek Environment Variables
+=========================================
+
+Aşağıdaki 5 environment variable'ı Vercel'e ekleyin.
+Değerleri .env.local dosyanızdan kopyalayın.
+
+┌─────────────────────────────────────────────────┐
+│ 1. NEXT_PUBLIC_SUPABASE_URL                    │
+│    .env.local dosyanızdan kopyalayın           │
+└─────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────┐
+│ 2. NEXT_PUBLIC_SUPABASE_ANON_KEY                │
+│    .env.local dosyanızdan kopyalayın           │
+└─────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────┐
+│ 3. SUPABASE_SERVICE_ROLE_KEY                    │
+│    .env.local dosyanızdan kopyalayın           │
+└─────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────┐
+│ 4. OPENAI_API_KEY                              │
+│    .env.local dosyanızdan kopyalayın           │
+└─────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────┐
+│ 5. ANTHROPIC_API_KEY                            │
+│    .env.local dosyanızdan kopyalayın           │
+└─────────────────────────────────────────────────┘
+
+ÖNEMLİ:
+✓ Her birini ekledikten sonra "Save" tıklayın
+✓ Environment: Production, Preview, Development (hepsini seçin)
+✓ Tüm 5 variable'ı eklemeden deploy etmeyin!
+

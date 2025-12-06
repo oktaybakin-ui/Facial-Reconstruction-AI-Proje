@@ -1,0 +1,40 @@
+=== .env.local Dosyası Formatı ===
+
+.env.local dosyanız şu formatta olmalı:
+
+----------------------------------------
+NEXT_PUBLIC_SUPABASE_URL=https://clcztcmxkmhrtnajciqd.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+OPENAI_API_KEY=sk-... (sk- ile başlamalı)
+ANTHROPIC_API_KEY=sk-ant-... (sk-ant- ile başlamalı)
+----------------------------------------
+
+ÖNEMLİ NOTLAR:
+1. Dosya adı tam olarak ".env.local" olmalı (nokta ile başlamalı)
+2. Her satırda bir değişken olmalı
+3. Değerlerde boşluk olmamalı
+4. Tırnak işareti kullanmayın (gerekirse sadece değerlerde)
+5. Açıklama için # kullanabilirsiniz
+
+ÖRNEK:
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://clcztcmxkmhrtnajciqd.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+
+# OpenAI
+OPENAI_API_KEY=sk-your_openai_key_here
+
+# Anthropic
+ANTHROPIC_API_KEY=sk-ant-your_anthropic_key_here
+
+KONTROL LİSTESİ:
+✅ Dosya adı: .env.local (nokta ile başlıyor)
+✅ Dosya konumu: facial-reconstruction-ai/facial-reconstruction-ai/ klasöründe
+✅ Tüm değişkenler mevcut
+✅ OPENAI_API_KEY sk- ile başlıyor
+✅ ANTHROPIC_API_KEY sk-ant- ile başlıyor
+✅ Değerlerde gereksiz boşluk yok
+✅ Sunucu yeniden başlatıldı (npm run dev)
+

@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { isAdmin } from '@/lib/auth/admin';
-import { toast } from '@/components/Toast';
-import { confirmDialog } from '@/components/ConfirmDialog';
+import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/components/ConfirmDialog';
 import { logger } from '@/lib/utils/logger';
 
 interface User {
@@ -20,6 +20,8 @@ interface User {
 
 export default function AdminPage() {
   const router = useRouter();
+  const { confirm } = useConfirmDialog();
+  const { success, error: showError, warning } = useToast();
   const [loading, setLoading] = useState(true);
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
@@ -42,7 +44,7 @@ export default function AdminPage() {
       }
 
       if (!isAdmin(user.email)) {
-        toast.error('Bu sayfaya erişim yetkiniz yok');
+        showError('Bu sayfaya erişim yetkiniz yok');
         router.push('/dashboard');
         return;
       }
@@ -50,8 +52,8 @@ export default function AdminPage() {
       setIsAdminUser(true);
       await loadUsers();
     } catch (error: unknown) {
-      logger?.error?.('Error checking admin:', error);
-      toast.error('Bir hata oluştu');
+      logger.error('Error checking admin:', error);
+      showError('Bir hata oluştu');
       router.push('/dashboard');
     } finally {
       setLoading(false);
@@ -79,8 +81,8 @@ export default function AdminPage() {
       const data = await response.json();
       setUsers(data.users || []);
     } catch (error: unknown) {
-      logger?.error?.('Error loading users:', error);
-      toast.error('Kullanıcılar yüklenemedi');
+      logger.error('Error loading users:', error);
+      showError('Kullanıcılar yüklenemedi');
     }
   };
 
@@ -100,14 +102,27 @@ export default function AdminPage() {
         setAutoApproveEnabled(data.enabled || false);
       }
     } catch (error: unknown) {
-      logger?.error?.('Error loading auto-approve setting:', error);
+      logger.error('Error loading auto-approve setting:', error);
     }
   };
 
   const handleApprove = async (userId: string) => {
-    const confirmed = await confirmDialog('Bu kullanıcıyı onaylamak istediğinize emin misiniz?');
-    if (!confirmed) return;
+    return new Promise<void>((resolve) => {
+      confirm({
+        title: 'Kullanıcı Onayla',
+        message: 'Bu kullanıcıyı onaylamak istediğinize emin misiniz?',
+        confirmText: 'Onayla',
+        cancelText: 'İptal',
+        onConfirm: async () => {
+          await approveUser(userId);
+          resolve();
+        },
+        onCancel: () => resolve(),
+      });
+    });
+  };
 
+  const approveUser = async (userId: string) => {
     setUpdating(userId);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -124,11 +139,11 @@ export default function AdminPage() {
         throw new Error('Onaylama başarısız');
       }
 
-      toast.success('Kullanıcı onaylandı');
+      success('Kullanıcı onaylandı');
       await loadUsers();
     } catch (error: unknown) {
-      logger?.error?.('Error approving user:', error);
-      toast.error('Kullanıcı onaylanamadı');
+      logger.error('Error approving user:', error);
+      showError('Kullanıcı onaylanamadı');
     } finally {
       setUpdating(null);
     }
@@ -136,12 +151,26 @@ export default function AdminPage() {
 
   const handleBulkApprove = async () => {
     if (selectedUsers.length === 0) {
-      toast.warning('Lütfen en az bir kullanıcı seçin');
+      warning('Lütfen en az bir kullanıcı seçin');
       return;
     }
 
-    const confirmed = await confirmDialog(`${selectedUsers.length} kullanıcıyı onaylamak istediğinize emin misiniz?`);
-    if (!confirmed) return;
+    return new Promise<void>((resolve) => {
+      confirm({
+        title: 'Toplu Onaylama',
+        message: `${selectedUsers.length} kullanıcıyı onaylamak istediğinize emin misiniz?`,
+        confirmText: 'Onayla',
+        cancelText: 'İptal',
+        onConfirm: async () => {
+          await bulkApproveUsers();
+          resolve();
+        },
+        onCancel: () => resolve(),
+      });
+    });
+  };
+
+  const bulkApproveUsers = async () => {
 
     setBulkUpdating(true);
     try {
@@ -158,12 +187,12 @@ export default function AdminPage() {
       );
 
       await Promise.all(promises);
-      toast.success(`${selectedUsers.length} kullanıcı onaylandı`);
+      success(`${selectedUsers.length} kullanıcı onaylandı`);
       setSelectedUsers([]);
       await loadUsers();
     } catch (error: unknown) {
-      logger?.error?.('Error bulk approving users:', error);
-      toast.error('Toplu onaylama başarısız');
+      logger.error('Error bulk approving users:', error);
+      showError('Toplu onaylama başarısız');
     } finally {
       setBulkUpdating(false);
     }
@@ -171,13 +200,24 @@ export default function AdminPage() {
 
   const handleToggleAutoApprove = async () => {
     const newValue = !autoApproveEnabled;
-    const confirmed = await confirmDialog(
-      newValue
-        ? 'Otomatik onayı etkinleştirmek istediğinize emin misiniz? Yeni kayıt olan tüm kullanıcılar otomatik olarak onaylanacak.'
-        : 'Otomatik onayı devre dışı bırakmak istediğinize emin misiniz?'
-    );
-    if (!confirmed) return;
+    return new Promise<void>((resolve) => {
+      confirm({
+        title: 'Otomatik Onay Ayarı',
+        message: newValue
+          ? 'Otomatik onayı etkinleştirmek istediğinize emin misiniz? Yeni kayıt olan tüm kullanıcılar otomatik olarak onaylanacak.'
+          : 'Otomatik onayı devre dışı bırakmak istediğinize emin misiniz?',
+        confirmText: 'Evet',
+        cancelText: 'İptal',
+        onConfirm: async () => {
+          await toggleAutoApprove(newValue);
+          resolve();
+        },
+        onCancel: () => resolve(),
+      });
+    });
+  };
 
+  const toggleAutoApprove = async (newValue: boolean) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -196,10 +236,10 @@ export default function AdminPage() {
       }
 
       setAutoApproveEnabled(newValue);
-      toast.success(newValue ? 'Otomatik onay etkinleştirildi' : 'Otomatik onay devre dışı bırakıldı');
+      success(newValue ? 'Otomatik onay etkinleştirildi' : 'Otomatik onay devre dışı bırakıldı');
     } catch (error: unknown) {
-      logger?.error?.('Error toggling auto-approve:', error);
-      toast.error('Ayar güncellenemedi');
+      logger.error('Error toggling auto-approve:', error);
+      showError('Ayar güncellenemedi');
     }
   };
 

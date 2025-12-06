@@ -8,6 +8,8 @@ import { supabase } from '@/lib/supabaseClient';
 import UnifiedImageOverlay, { type Annotation, type AnnotationShape } from './UnifiedImageOverlay';
 import type { Case, CasePhoto } from '@/types/cases';
 import type { AIResult, FlapSuggestion } from '@/types/ai';
+import { useConfirmDialog } from '@/components/ConfirmDialog';
+import { useToast } from '@/components/Toast';
 
 interface CaseDetailContentProps {
   caseData: Case;
@@ -23,6 +25,8 @@ export default function CaseDetailContent({
   userId,
 }: CaseDetailContentProps) {
   const router = useRouter();
+  const { confirm } = useConfirmDialog();
+  const { success, error: showError } = useToast();
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AIResult | null>(aiResult);
 
@@ -265,18 +269,50 @@ export default function CaseDetailContent({
     }
   };
 
+  const handleDeleteCase = async (caseId: string, caseCode: string) => {
+    confirm({
+      title: 'Olgu Sil',
+      message: `"${caseCode}" olgusunu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`,
+      confirmText: 'Sil',
+      cancelText: 'İptal',
+      onConfirm: async () => {
+        try {
+          if (!userId) {
+            showError('Oturum açmanız gerekiyor');
+            return;
+          }
+
+          const response = await fetch(`/api/cases/${caseId}?user_id=${userId}`, {
+            method: 'DELETE',
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Olgu silinemedi');
+          }
+
+          success('Olgu başarıyla silindi');
+          router.push('/dashboard');
+        } catch (err: any) {
+          console.error('Error deleting case:', err);
+          showError(err.message || 'Olgu silinirken bir hata oluştu');
+        }
+      },
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30">
       {/* Modern Navigation */}
-      <nav className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
+      <nav className="glass sticky top-0 z-50 border-b border-white/20 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/dashboard" className="text-xl font-bold text-gray-900 hover:opacity-80 transition-opacity">
+            <Link href="/dashboard" className="text-xl font-bold gradient-text hover:opacity-80 transition-opacity">
               AI Yüz Rekonstrüksiyon Platformu
             </Link>
             <Link
               href="/dashboard"
-              className="px-5 py-2 bg-gray-200 text-gray-700 rounded-2xl hover:bg-gray-300 transition-colors font-semibold"
+              className="btn-secondary text-sm"
             >
               ← Dashboard'a Dön
             </Link>
@@ -286,13 +322,27 @@ export default function CaseDetailContent({
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Modern Case Summary Card */}
-        <div className="bg-white border-2 border-gray-200 rounded-3xl shadow-xl p-6 mb-6">
+        <div className="card-hover animate-fadeIn">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">
                 Olgu Detayı
               </h1>
-              <p className="text-2xl font-extrabold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">{caseData.case_code}</p>
+              <p className="text-3xl font-extrabold gradient-text">{caseData.case_code}</p>
+            </div>
+            <div className="flex gap-3">
+              <Link
+                href={`/cases/${caseData.id}/edit`}
+                className="btn-secondary text-sm"
+              >
+                ✏️ Düzenle
+              </Link>
+              <button
+                onClick={() => handleDeleteCase(caseData.id, caseData.case_code)}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-xl"
+              >
+                🗑️ Sil
+              </button>
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -325,22 +375,22 @@ export default function CaseDetailContent({
 
         {/* Modern Pre-op Photo Section */}
         {preopPhoto ? (
-          <div className="bg-white border-2 border-gray-200 rounded-3xl shadow-xl p-6 mb-6">
+          <div className="card-hover animate-fadeIn">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Pre-op Fotoğraf</h2>
-                <p className="text-sm text-gray-600">Lezyon bölgesini işaretleyin ve AI analizi çalıştırın</p>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Pre-op Fotoğraf</h2>
+                <p className="text-sm text-gray-500">Lezyon bölgesini işaretleyin ve AI analizi çalıştırın</p>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 {analysisResult && analysisResult.flap_suggestions.some(f => f.flap_drawing) && (
                   <button
                     onClick={() => {
                       setShowFlapDrawings(!showFlapDrawings);
                       if (!showFlapDrawings) setShowAnnotation(false);
                     }}
-                    className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-2xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-105"
+                    className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all text-sm font-medium shadow-md hover:shadow-lg"
                   >
-                    {showFlapDrawings ? '👁️ Çizimleri Gizle' : '📐 Çizimleri Göster'}
+                    {showFlapDrawings ? '👁️ Gizle' : '📐 Göster'}
                   </button>
                 )}
                 <button
@@ -348,9 +398,9 @@ export default function CaseDetailContent({
                     setShowAnnotation(!showAnnotation);
                     if (!showAnnotation) setShowFlapDrawings(false);
                   }}
-                  className="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-2xl hover:from-indigo-600 hover:to-purple-600 transition-all duration-300 text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-105"
+                  className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-all text-sm font-medium shadow-md hover:shadow-lg"
                 >
-                  {showAnnotation ? '✕ İşaretlemeyi Kapat' : '✏️ Lezyonu İşaretle'}
+                  {showAnnotation ? '✕ Kapat' : '✏️ İşaretle'}
                 </button>
               </div>
             </div>

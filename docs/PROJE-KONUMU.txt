@@ -1,0 +1,111 @@
+================================================================================
+FACIAL RECONSTRUKSİYON AI - PROJE ANA DOSYALARI KONUMU
+================================================================================
+
+PROJE ANA KLASÖRÜ:
+------------------
+C:\Users\oktay\facial-reconstruction-ai\facial-reconstruction-ai
+
+DOKÜMANTASYON KLASÖRÜ:
+----------------------
+C:\Users\oktay\Desktop\Facial-Reconstruction-AI-Dokumantasyon
+
+================================================================================
+PROJE KLASÖR YAPISI
+================================================================================
+
+facial-reconstruction-ai/
+└── facial-reconstruction-ai/           <-- ANA PROJE KLASÖRÜ
+    ├── app/                            <-- Next.js App Router
+    │   ├── api/                        <-- API Routes
+    │   ├── auth/                       <-- Kimlik doğrulama sayfaları
+    │   ├── cases/                      <-- Olgu yönetimi sayfaları
+    │   ├── dashboard/                  <-- Dashboard sayfaları
+    │   ├── knowledge-base/             <-- Bilgi tabanı sayfaları
+    │   ├── hakkimizda/                 <-- Hakkımızda sayfası
+    │   ├── layout.tsx                  <-- Root layout
+    │   └── page.tsx                    <-- Ana sayfa
+    │
+    ├── lib/                            <-- Utility kütüphaneler
+    │   ├── ai/                         <-- AI modülleri
+    │   ├── auth/                       <-- Auth utilities
+    │   ├── medical/                    <-- Medical source utilities
+    │   ├── utils/                      <-- Genel utilities
+    │   ├── auth.ts                     <-- Auth helpers
+    │   ├── supabaseClient.ts           <-- Supabase client
+    │   └── validators.ts               <-- Zod validators
+    │
+    ├── types/                          <-- TypeScript type tanımları
+    │   ├── ai.ts                       <-- AI types
+    │   ├── cases.ts                    <-- Case types
+    │   └── medical.ts                  <-- Medical source types
+    │
+    ├── .env.local                      <-- Environment variables (oluşturulmalı)
+    ├── package.json                    <-- NPM bağımlılıkları
+    ├── tsconfig.json                   <-- TypeScript config
+    ├── tailwind.config.ts              <-- Tailwind CSS config
+    ├── next.config.js                  <-- Next.js config
+    └── README.md                       <-- Proje README
+
+================================================================================
+ÖNEMLİ DOSYA YOLLARI
+================================================================================
+
+ANA KLASÖR:
+-----------
+C:\Users\oktay\facial-reconstruction-ai\facial-reconstruction-ai
+
+CONFIG DOSYALARI:
+-----------------
+- package.json: C:\Users\oktay\facial-reconstruction-ai\facial-reconstruction-ai\package.json
+- .env.local: C:\Users\oktay\facial-reconstruction-ai\facial-reconstruction-ai\.env.local
+
+ANA KLASÖRLER:
+--------------
+- App Router: C:\Users\oktay\facial-reconstruction-ai\facial-reconstruction-ai\app\
+- Lib (Utilities): C:\Users\oktay\facial-reconstruction-ai\facial-reconstruction-ai\lib\
+- Types: C:\Users\oktay\facial-reconstruction-ai\facial-reconstruction-ai\types\
+
+API ROUTES:
+-----------
+C:\Users\oktay\facial-reconstruction-ai\facial-reconstruction-ai\app\api\
+
+SAYFALAR:
+---------
+- Ana Sayfa: C:\Users\oktay\facial-reconstruction-ai\facial-reconstruction-ai\app\page.tsx
+- Dashboard: C:\Users\oktay\facial-reconstruction-ai\facial-reconstruction-ai\app\dashboard\
+- Olgu İşlemleri: C:\Users\oktay\facial-reconstruction-ai\facial-reconstruction-ai\app\cases\
+- Bilgi Tabanı: C:\Users\oktay\facial-reconstruction-ai\facial-reconstruction-ai\app\knowledge-base\
+
+AI MODÜLLERİ:
+-------------
+C:\Users\oktay\facial-reconstruction-ai\facial-reconstruction-ai\lib\ai\
+
+================================================================================
+KLASÖR ERİŞİMİ
+================================================================================
+
+Windows Explorer'da açmak için:
+1. Windows + R tuşlarına basın
+2. Şu yolu yapıştırın:
+   C:\Users\oktay\facial-reconstruction-ai\facial-reconstruction-ai
+
+Veya PowerShell'de:
+cd C:\Users\oktay\facial-reconstruction-ai\facial-reconstruction-ai
+
+================================================================================
+VS CODE'DA AÇMA
+================================================================================
+
+1. VS Code'u açın
+2. File > Open Folder
+3. Şu klasörü seçin:
+   C:\Users\oktay\facial-reconstruction-ai\facial-reconstruction-ai
+
+Veya terminalde:
+code C:\Users\oktay\facial-reconstruction-ai\facial-reconstruction-ai
+
+================================================================================
+SON GÜNCELLEME: Aralık 2024
+================================================================================
+

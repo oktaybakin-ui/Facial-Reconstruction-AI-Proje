@@ -1,0 +1,30 @@
+[
+  {
+    "title": "Transpozisyon Flebi Teknikleri ve Uygulama Prensipleri",
+    "content": "Transpozisyon flebi, defektin hemen yanındaki sağlam dokudan alınan flebin defekt alanına aktarılması prensibine dayanır. Flep, defekt boyutunun 1.5-2 katı genişliğinde planlanmalıdır. Natural skin tension lines (RSTL) boyunca insizyon yapılmalıdır. Disseksiyon subkutanöz doku tabakası altında, fasya seviyesinde yapılır. Flep yeterli mobilite kazanana kadar mobilize edilir ve defekt alanına transpoze edilir. Donor alan direkt kapatma veya graft ile kapatılabilir. Bu teknik özellikle yüzün üst ve orta kısımlarındaki defektler için idealdir.",
+    "source_type": "guideline",
+    "keywords": ["transpozisyon", "flep", "yüz rekonstrüksiyonu", "RSTL", "natural skin tension lines"],
+    "region_focus": ["Alın", "Yanak", "Burun"],
+    "flap_types": ["Transpozisyon"],
+    "source_url": ""
+  },
+  {
+    "title": "Rotasyon Flebi Teknikleri ve Endikasyonları",
+    "content": "Rotasyon flebi, donor alanın defekt alanı etrafında döndürülmesi prensibine dayanır. Bu teknik özellikle üçgen defektler için idealdir. Flep tasarımında donor alanın kapatılabilirliği değerlendirilmelidir. Rotasyon flebi, defekt alanına en yakın sağlam dokudan oluşturulur ve döndürülerek defekt kapatılır. Bu teknik alın, şakak ve çene bölgelerindeki defektler için uygundur. Flep tasarımında geometrik hesaplamalar önemlidir.",
+    "source_type": "article",
+    "keywords": ["rotasyon", "flep", "yüz rekonstrüksiyonu", "üçgen defekt"],
+    "region_focus": ["Alın", "Şakak", "Çene"],
+    "flap_types": ["Rotasyon"],
+    "source_url": ""
+  },
+  {
+    "title": "Bilobed Flep: Teknik, Endikasyonlar ve Komplikasyonlar",
+    "content": "Bilobed flep, burun bölgesindeki defektler için özellikle uygun bir tekniktir. İki loblu flep tasarımı ile defekt alanı ve donor alan aynı anda kapatılır. İlk lob defekt alanını kapatırken, ikinci lob birinci lobun donor alanını kapatır. Bu teknik burun kanadı ve burun sırtı bölgelerindeki küçük ve orta boy defektler için idealdir. Flep tasarımında 90-110 derece açı ile planlama yapılmalıdır.",
+    "source_type": "research",
+    "keywords": ["bilobed", "flep", "burun rekonstrüksiyonu", "burun kanadı"],
+    "region_focus": ["Burun", "Burun kanadı"],
+    "flap_types": ["Bilobed"],
+    "source_url": ""
+  }
+]
+
