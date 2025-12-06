@@ -274,44 +274,48 @@ export default function AdminPage() {
   };
 
   const handleUnban = async (userId: string) => {
-    const confirmed = await confirm({
-      title: 'Yasak Kaldır',
-      message: 'Bu kullanıcının yasağını kaldırmak istediğinize emin misiniz?',
-      confirmText: 'Yasak Kaldır',
-      cancelText: 'İptal',
-    });
+    return new Promise<void>((resolve) => {
+      confirm({
+        title: 'Yasak Kaldır',
+        message: 'Bu kullanıcının yasağını kaldırmak istediğinize emin misiniz?',
+        confirmText: 'Yasak Kaldır',
+        cancelText: 'İptal',
+        onConfirm: async () => {
+          setUpdating(userId);
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+              showError('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+              resolve();
+              return;
+            }
 
-    if (!confirmed) return;
+            const response = await fetch(`/api/admin/users/${userId}/unban`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+              },
+            });
 
-    setUpdating(userId);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        showError('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
-        return;
-      }
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(errorData.error || 'Yasak kaldırılamadı');
+            }
 
-      const response = await fetch(`/api/admin/users/${userId}/unban`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
+            success('Kullanıcı yasağı kaldırıldı');
+            await loadUsers();
+          } catch (error: unknown) {
+            logger.error('Error unbanning user:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Yasak kaldırılamadı';
+            showError(errorMessage);
+          } finally {
+            setUpdating(null);
+            resolve();
+          }
         },
+        onCancel: () => resolve(),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Yasak kaldırılamadı');
-      }
-
-      success('Kullanıcı yasağı kaldırıldı');
-      await loadUsers();
-    } catch (error: unknown) {
-      logger.error('Error unbanning user:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Yasak kaldırılamadı';
-      showError(errorMessage);
-    } finally {
-      setUpdating(null);
-    }
+    });
   };
 
   const confirmBan = async () => {
