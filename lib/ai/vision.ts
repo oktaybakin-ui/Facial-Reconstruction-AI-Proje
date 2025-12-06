@@ -1,6 +1,6 @@
 'use server';
 
-import { openai } from '@/lib/openai';
+import { getOpenAIClient } from '@/lib/openai';
 import type { VisionSummary } from '@/types/ai';
 import type { Case } from '@/types/cases';
 
@@ -120,6 +120,7 @@ export async function analyzeVision(
       throw new Error(`Fotoğraf indirilemedi veya base64'e çevrilemedi: ${fetchError.message}`);
     }
     
+    const openai = getOpenAIClient();
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [

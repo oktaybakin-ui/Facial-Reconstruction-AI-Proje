@@ -1,0 +1,103 @@
+import { NextResponse } from 'next/server';
+import { getOpenAIClient } from '@/lib/openai';
+
+export async function GET() {
+  try {
+    // Check if API key exists
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json({
+        success: false,
+        error: 'OPENAI_API_KEY environment variable not found',
+        keyPresent: false,
+      }, { status: 500 });
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    const keyInfo = {
+      present: true,
+      length: apiKey.length,
+      startsWith: apiKey.substring(0, 10),
+      endsWith: apiKey.substring(apiKey.length - 10),
+    };
+
+    // Try to create OpenAI client
+    let client;
+    try {
+      client = getOpenAIClient();
+    } catch (clientError: any) {
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to create OpenAI client',
+        details: clientError.message,
+        keyInfo,
+      }, { status: 500 });
+    }
+
+    // Try to make a simple API call (list models)
+    let apiTest;
+    try {
+      apiTest = await client.models.list();
+      return NextResponse.json({
+        success: true,
+        message: 'OpenAI API key is working!',
+        keyInfo,
+        testResult: {
+          modelsAvailable: apiTest.data?.length || 0,
+          firstModel: apiTest.data?.[0]?.id || 'N/A',
+        },
+      });
+    } catch (apiError: any) {
+      // Parse error details
+      const errorDetails = {
+        message: apiError.message,
+        status: apiError.status,
+        code: apiError.code,
+        type: apiError.type,
+      };
+
+      // Check for specific error types
+      let errorType = 'unknown';
+      if (apiError.status === 401) {
+        errorType = 'invalid_key';
+      } else if (apiError.status === 429) {
+        errorType = 'rate_limit';
+      } else if (apiError.status === 500) {
+        errorType = 'server_error';
+      }
+
+      return NextResponse.json({
+        success: false,
+        error: 'OpenAI API call failed',
+        errorType,
+        errorDetails,
+        keyInfo,
+        suggestions: {
+          invalid_key: [
+            'Check if API key is correct',
+            'Verify key is not expired',
+            'Create a new API key at https://platform.openai.com/api-keys',
+            'Make sure key has proper permissions',
+          ],
+          rate_limit: [
+            'Wait a few minutes and try again',
+            'Check your usage limits at https://platform.openai.com/account/rate-limits',
+            'Upgrade your plan if needed',
+          ],
+          server_error: [
+            'OpenAI servers may be experiencing issues',
+            'Try again in a few minutes',
+            'Check OpenAI status page',
+          ],
+        }[errorType] || ['Check error details above'],
+      }, { status: 500 });
+    }
+  } catch (error: any) {
+    return NextResponse.json({
+      success: false,
+      error: 'Unexpected error',
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    }, { status: 500 });
+  }
+}
+

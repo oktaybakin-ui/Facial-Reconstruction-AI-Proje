@@ -1,6 +1,6 @@
 'use server';
 
-import { openai } from '@/lib/openai';
+import { getOpenAIClient } from '@/lib/openai';
 import type { FlapSuggestion, VisionSummary } from '@/types/ai';
 import type { Case } from '@/types/cases';
 
@@ -239,6 +239,7 @@ TÜM YANIT TÜRKÇE OLMALI.`;
 
     console.log('Calling OpenAI Decision API...');
     
+    const openai = getOpenAIClient();
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
