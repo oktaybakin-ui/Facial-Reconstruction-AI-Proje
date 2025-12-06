@@ -33,17 +33,23 @@ export async function GET() {
       }, { status: 500 });
     }
 
-    // Try to make a simple API call (list models)
+    // Try to make a simple API call (chat completion with minimal request)
     let apiTest;
     try {
-      apiTest = await client.models.list();
+      // Use a very simple test request
+      apiTest = await client.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: 'Say "test"' }],
+        max_tokens: 5,
+      });
+      
       return NextResponse.json({
         success: true,
         message: 'OpenAI API key is working!',
         keyInfo,
         testResult: {
-          modelsAvailable: apiTest.data?.length || 0,
-          firstModel: apiTest.data?.[0]?.id || 'N/A',
+          response: apiTest.choices[0]?.message?.content || 'No response',
+          model: apiTest.model,
         },
       });
     } catch (apiError: any) {
