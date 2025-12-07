@@ -1,10 +1,9 @@
-'use server';
+# Flep Önerisi AI Prompt - Tam Metin
 
-import { getOpenAIClient } from '@/lib/openai';
-import type { FlapSuggestion, VisionSummary } from '@/types/ai';
-import type { Case } from '@/types/cases';
+## SYSTEM PROMPT
 
-const SYSTEM_PROMPT = `Sen yüz bölgesi cilt defektleri için rekonstrüksiyon karar destek asistanısın.
+```
+Sen yüz bölgesi cilt defektleri için rekonstrüksiyon karar destek asistanısın.
 Hasta metadata'sı ve görüntü analizi özeti alıyorsun.
 
 BÖLGE-SPESİFİK BİLGİLER:
@@ -191,56 +190,43 @@ YAŞ-SPESİFİK ÖNERİLER:
 
 Her flep önerisinde yaş faktörünü değerlendir ve uygun öneriler yap.
 
-TÜM ÇIKTI TÜRKÇE OLMALI. Flep isimleri, açıklamalar, avantajlar, dikkat edilmesi gerekenler, cerrahi teknik - hepsi Türkçe olmalı.`;
+TÜM ÇIKTI TÜRKÇE OLMALI. Flep isimleri, açıklamalar, avantajlar, dikkat edilmesi gerekenler, cerrahi teknik - hepsi Türkçe olmalı.
+```
 
-export async function suggestFlaps(
-  caseData: Case,
-  visionSummary: VisionSummary,
-  medicalSourcesContext?: string
-): Promise<FlapSuggestion[]> {
-  // Log defect location for debugging
-  if (visionSummary.defect_location) {
-    console.log('Defect location from vision:', visionSummary.defect_location);
-  } else {
-    console.warn('⚠️ No defect_location found in vision summary - drawings may not align correctly!');
-  }
-  // Check API key
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OpenAI API key bulunamadı. Lütfen .env.local dosyasında OPENAI_API_KEY değişkenini ayarlayın.');
-  }
+---
 
-  console.log('Starting flap suggestion analysis...');
-  console.log('OpenAI API key present:', !!process.env.OPENAI_API_KEY);
+## USER PROMPT (Template)
 
-  try {
-    const userPrompt = `Bu olguyu analiz et ve lokal flep seçenekleri öner:
+```
+Bu olguyu analiz et ve lokal flep seçenekleri öner:
 
 Olgu Bilgileri:
-- Bölge: ${caseData.region}
-- Yaş: ${caseData.age || 'Belirtilmemiş'}
-- Cinsiyet: ${caseData.sex || 'Belirtilmemiş'}
-- Defekt boyutu: ${caseData.width_mm || visionSummary.estimated_width_mm}mm x ${caseData.height_mm || visionSummary.estimated_height_mm}mm
-- Derinlik: ${caseData.depth || visionSummary.depth_estimation}
-- Önceki cerrahi: ${caseData.previous_surgery ? 'Evet' : 'Hayır'}
-- Önceki radyoterapi: ${caseData.previous_radiotherapy ? 'Evet' : 'Hayır'}
-- Şüpheli patoloji: ${caseData.pathology_suspected || 'Belirtilmemiş'}
-- Kritik yapılar: ${caseData.critical_structures?.join(', ') || visionSummary.critical_structures.join(', ') || 'Yok'}
-- Yüksek estetik zon: ${caseData.high_aesthetic_zone ?? visionSummary.aesthetic_zone ? 'Evet' : 'Hayır'}
+- Bölge: {caseData.region}
+- Yaş: {caseData.age || 'Belirtilmemiş'}
+- Cinsiyet: {caseData.sex || 'Belirtilmemiş'}
+- Defekt boyutu: {caseData.width_mm || visionSummary.estimated_width_mm}mm x {caseData.height_mm || visionSummary.estimated_height_mm}mm
+- Derinlik: {caseData.depth || visionSummary.depth_estimation}
+- Önceki cerrahi: {caseData.previous_surgery ? 'Evet' : 'Hayır'}
+- Önceki radyoterapi: {caseData.previous_radiotherapy ? 'Evet' : 'Hayır'}
+- Şüpheli patoloji: {caseData.pathology_suspected || 'Belirtilmemiş'}
+- Kritik yapılar: {caseData.critical_structures?.join(', ') || visionSummary.critical_structures.join(', ') || 'Yok'}
+- Yüksek estetik zon: {caseData.high_aesthetic_zone ?? visionSummary.aesthetic_zone ? 'Evet' : 'Hayır'}
 
 Görüntü Analizi:
-- Tespit edilen bölge: ${visionSummary.detected_region}
-- Tahmini boyut: ${visionSummary.estimated_width_mm}mm x ${visionSummary.estimated_height_mm}mm
-- Derinlik tahmini: ${visionSummary.depth_estimation}
-- Tespit edilen kritik yapılar: ${visionSummary.critical_structures.join(', ') || 'Yok'}
-- Estetik zon: ${visionSummary.aesthetic_zone ? 'Evet' : 'Hayır'}
-${visionSummary.defect_location ? `
+- Tespit edilen bölge: {visionSummary.detected_region}
+- Tahmini boyut: {visionSummary.estimated_width_mm}mm x {visionSummary.estimated_height_mm}mm
+- Derinlik tahmini: {visionSummary.depth_estimation}
+- Tespit edilen kritik yapılar: {visionSummary.critical_structures.join(', ') || 'Yok'}
+- Estetik zon: {visionSummary.aesthetic_zone ? 'Evet' : 'Hayır'}
+
+{visionSummary.defect_location ? `
 KRİTİK - Defekt Konumu (KULLANICI TARAFINDAN MANUEL İŞARETLENMİŞ):
 Bu koordinatlar kullanıcının manuel olarak işaretlediği lezyon konumudur. VİZYON MODEL'İN TAHMİNLERİNİ DİKKATE ALMA!
 
 Koordinat sistemi: 0-1000 normalize (görüntünün görünen boyutuna göre)
-- Defekt Merkezi: (${visionSummary.defect_location.center_x}, ${visionSummary.defect_location.center_y})
-- Defekt Boyutu: ${visionSummary.defect_location.width} x ${visionSummary.defect_location.height}
-${visionSummary.defect_location.points ? `- Defekt Poligon Noktaları (MANUEL, 0-1000 normalize): ${JSON.stringify(visionSummary.defect_location.points)}` : ''}
+- Defekt Merkezi: ({visionSummary.defect_location.center_x}, {visionSummary.defect_location.center_y})
+- Defekt Boyutu: {visionSummary.defect_location.width} x {visionSummary.defect_location.height}
+{visionSummary.defect_location.points ? `- Defekt Poligon Noktaları (MANUEL, 0-1000 normalize): {JSON.stringify(visionSummary.defect_location.points)}` : ''}
 
 ÇOK ÖNEMLİ - KOORDINAT SİSTEMİ:
 - Tüm koordinatlar 0-1000 arası normalize edilmiş (görüntünün görünen boyutuna göre)
@@ -250,19 +236,19 @@ ${visionSummary.defect_location.points ? `- Defekt Poligon Noktaları (MANUEL, 0
 - defect_location.points dizisindeki koordinatları AYNEN kullan - değiştirme!
 ` : ''}
 
-  Uygun lokal flep seçeneklerini uygunluk skorları ve kategorileriyle birlikte öner.
+Uygun lokal flep seçeneklerini uygunluk skorları ve kategorileriyle birlikte öner.
 
 EĞER BULABİLİRSEN, her flep tipi için YouTube'da cerrahi uygulama videosu linki ekle (video_link alanı).
 Örnek: "https://www.youtube.com/watch?v=..." veya "https://youtu.be/..."
 Bu videolar flep tekniğinin nasıl uygulandığını gösteren gerçek cerrahi videolar olmalı.
 Eğer uygun video bulamazsan, video_link alanını boş string ("") olarak bırak.
 
-${medicalSourcesContext ? `
+{medicalSourcesContext ? `
 TIBBİ KAYNAK BİLGİLERİ (ÇOK ÖNEMLİ - MUTLAKA KULLAN):
 Aşağıdaki tıbbi kaynaklar bu olgu için ilgili bilgiler içermektedir. 
 Bu kaynakları MUTLAKA referans al ve önerilerinde öncelikle kullan:
 
-${medicalSourcesContext}
+{medicalSourcesContext}
 
 ÖNEMLİ KURALLAR:
 - Bu kaynaklardaki spesifik teknikleri öncelikle kullan
@@ -314,195 +300,42 @@ KOORDINAT SİSTEMİ: Tüm koordinatlar 0-1000 arası normalize (görüntünün g
 
 Çizimler anatomik olarak doğru, profesyonel ve estetik olmalı. Kesi çizgileri kesikli (dashed), flep alanları dolu (solid) olmalı.
 
-TÜM YANIT TÜRKÇE OLMALI.`;
+TÜM YANIT TÜRKÇE OLMALI.
+```
 
-    console.log('Calling OpenAI Decision API...');
-    
-    const openai = getOpenAIClient();
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: userPrompt },
-      ],
-      max_tokens: 6000, // Increased for detailed surgical drawings with coordinates
-      response_format: { type: 'json_object' },
-      temperature: 0.7,
-    });
+---
 
-    console.log('OpenAI Decision API response received:', {
-      hasChoices: !!response.choices,
-      choicesLength: response.choices?.length || 0,
-      finishReason: response.choices?.[0]?.finish_reason,
-      hasContent: !!response.choices[0]?.message?.content,
-      contentLength: response.choices[0]?.message?.content?.length || 0,
-      contentPreview: response.choices[0]?.message?.content?.substring(0, 100),
-    });
+## ÖZET
 
-    const content = response.choices[0]?.message?.content;
-    
-    // Finish reason "stop" is actually success - but content might be empty
-    if (!content || content.trim() === '') {
-      console.error('No content in decision response (even though finish_reason might be stop):', {
-        finishReason: response.choices[0]?.finish_reason,
-        message: response.choices[0]?.message,
-        fullResponse: JSON.stringify(response, null, 2).substring(0, 500),
-      });
-      throw new Error(`Decision model yanıt verdi ama içerik boş. Finish reason: ${response.choices[0]?.finish_reason || 'unknown'}`);
-    }
-    
-    console.log('Decision content received successfully, length:', content.length);
+Bu prompt, yüz bölgesi cilt defektleri için rekonstrüksiyon karar destek sistemi için kullanılmaktadır. Prompt şunları içerir:
 
-    console.log('Decision response content received:', content.substring(0, 200) + '...');
-    
-    let parsed;
-    try {
-      parsed = JSON.parse(content);
-    } catch (parseError: any) {
-      console.error('JSON parse error in decision:', parseError);
-      console.error('Content that failed to parse:', content);
-      throw new Error(`Decision model yanıtı parse edilemedi: ${parseError.message}`);
-    }
-    
-    const suggestions = parsed.flap_suggestions || [];
-    
-    if (!Array.isArray(suggestions) || suggestions.length === 0) {
-      console.warn('No flap suggestions in response:', parsed);
-      throw new Error("Decision model tarafından flep önerisi dönmedi. Lütfen tekrar deneyin.");
-    }
-    
-    // Validate and normalize suggestions
-    return suggestions.map((flap: any) => ({
-      flap_name: flap.flap_name || 'Bilinmeyen flep',
-      suitability_score: Math.max(0, Math.min(100, flap.suitability_score || 50)),
-      category: ['en_uygun', 'uygun', 'alternatif'].includes(flap.category) 
-        ? flap.category 
-        : 'alternatif',
-      why: flap.why || 'Açıklama sağlanmadı',
-      advantages: Array.isArray(flap.advantages) ? flap.advantages : [],
-      cautions: Array.isArray(flap.cautions) ? flap.cautions : [],
-      alternatives: Array.isArray(flap.alternatives) ? flap.alternatives : [],
-      aesthetic_risk: ['düşük', 'orta', 'yüksek'].includes(flap.aesthetic_risk)
-        ? flap.aesthetic_risk
-        : 'orta',
-      functional_risk: ['düşük', 'orta', 'yüksek'].includes(flap.functional_risk)
-        ? flap.functional_risk
-        : 'orta',
-      complication_risk: ['düşük', 'orta', 'yüksek'].includes(flap.complication_risk)
-        ? flap.complication_risk
-        : 'orta',
-      expected_complications: Array.isArray(flap.expected_complications) ? flap.expected_complications : [],
-      prevention_strategies: Array.isArray(flap.prevention_strategies) ? flap.prevention_strategies : [],
-      donor_site_morbidity: ['minimal', 'moderate', 'significant'].includes(flap.donor_site_morbidity)
-        ? flap.donor_site_morbidity
-        : 'moderate',
-      contraindications: Array.isArray(flap.contraindications) ? flap.contraindications : [],
-      relative_contraindications: Array.isArray(flap.relative_contraindications) ? flap.relative_contraindications : [],
-      when_to_avoid: flap.when_to_avoid || 'Belirtilmemiş',
-      comparison_with_alternatives: flap.comparison_with_alternatives && typeof flap.comparison_with_alternatives === 'object'
-        ? {
-            better_than: Array.isArray(flap.comparison_with_alternatives.better_than) ? flap.comparison_with_alternatives.better_than : [],
-            worse_than: Array.isArray(flap.comparison_with_alternatives.worse_than) ? flap.comparison_with_alternatives.worse_than : [],
-            similar_to: Array.isArray(flap.comparison_with_alternatives.similar_to) ? flap.comparison_with_alternatives.similar_to : [],
-          }
-        : { better_than: [], worse_than: [], similar_to: [] },
-      postoperative_care: flap.postoperative_care && typeof flap.postoperative_care === 'object'
-        ? {
-            immediate: Array.isArray(flap.postoperative_care.immediate) ? flap.postoperative_care.immediate : [],
-            early: Array.isArray(flap.postoperative_care.early) ? flap.postoperative_care.early : [],
-            late: Array.isArray(flap.postoperative_care.late) ? flap.postoperative_care.late : [],
-            long_term: Array.isArray(flap.postoperative_care.long_term) ? flap.postoperative_care.long_term : [],
-          }
-        : { immediate: [], early: [], late: [], long_term: [] },
-      follow_up_schedule: flap.follow_up_schedule && typeof flap.follow_up_schedule === 'object'
-        ? {
-            day_1: flap.follow_up_schedule.day_1 || 'Belirtilmemiş',
-            day_7: flap.follow_up_schedule.day_7 || 'Belirtilmemiş',
-            day_14: flap.follow_up_schedule.day_14 || 'Belirtilmemiş',
-            month_1: flap.follow_up_schedule.month_1 || 'Belirtilmemiş',
-            month_3: flap.follow_up_schedule.month_3 || 'Belirtilmemiş',
-          }
-        : { day_1: 'Belirtilmemiş', day_7: 'Belirtilmemiş', day_14: 'Belirtilmemiş', month_1: 'Belirtilmemiş', month_3: 'Belirtilmemiş' },
-      estimated_surgery_time: flap.estimated_surgery_time || 'Belirtilmemiş',
-      estimated_cost_range: flap.estimated_cost_range || 'Belirtilmemiş',
-      complexity_level: ['basit', 'orta', 'kompleks'].includes(flap.complexity_level)
-        ? flap.complexity_level
-        : 'orta',
-      technical_difficulty: ['başlangıç', 'orta', 'ileri', 'uzman'].includes(flap.technical_difficulty)
-        ? flap.technical_difficulty
-        : 'orta',
-      evidence_level: ['yüksek', 'orta', 'düşük'].includes(flap.evidence_level)
-        ? flap.evidence_level
-        : 'orta',
-      success_rate: flap.success_rate || 'Belirtilmemiş',
-      surgical_technique: flap.surgical_technique || flap.cerrahi_teknik || undefined,
-      video_link: flap.video_link || flap.youtube_link || undefined,
-      flap_drawing: (() => {
-        // CRITICAL: Always use defect_location.points for defect_area if it exists (manual annotation)
-        // This ensures manual annotation is ALWAYS used, not AI's own detection
-        const manualDefectArea = visionSummary.defect_location?.points ? {
-          points: visionSummary.defect_location.points,
-          color: '#FF0000',
-          label: 'Defekt Alanı (Manuel)',
-        } : undefined;
-        
-        // If AI provided flap_drawing, use it but FORCE defect_area to use manual annotation
-        if (flap.flap_drawing) {
-          return {
-            // ALWAYS use manual defect_location for defect_area - user's manual drawing takes priority
-            defect_area: manualDefectArea || flap.flap_drawing.defect_area || undefined,
-            incision_lines: Array.isArray(flap.flap_drawing.incision_lines) ? flap.flap_drawing.incision_lines : [],
-            flap_areas: Array.isArray(flap.flap_drawing.flap_areas) ? flap.flap_drawing.flap_areas : [],
-            donor_area: flap.flap_drawing.donor_area || undefined,
-            arrows: Array.isArray(flap.flap_drawing.arrows) ? flap.flap_drawing.arrows : [],
-          };
-        }
-        
-        // If no flap_drawing from AI, create minimal one with manual defect location
-        if (manualDefectArea) {
-          return {
-            defect_area: manualDefectArea,
-            incision_lines: [],
-            flap_areas: [],
-            arrows: [],
-          };
-        }
-        
-        return undefined;
-      })(),
-    }));
-  } catch (error: any) {
-    console.error('Decision suggestion error:', error);
-    console.error('Error details:', {
-      message: error?.message,
-      status: error?.status,
-      statusCode: error?.statusCode,
-      stack: error?.stack,
-      response: error?.response,
-    });
-    
-    // Handle OpenAI API key errors specifically
-    const errorMessage = error?.message || '';
-    const errorStatus = error?.status || error?.statusCode;
-    
-    if (errorStatus === 401 || errorMessage.includes('Incorrect API key') || errorMessage.includes('401')) {
-      throw new Error(
-        'OpenAI API key geçersiz veya eksik. ' +
-        'Lütfen Vercel Dashboard\'da OPENAI_API_KEY environment variable\'ını kontrol edin. ' +
-        'API key\'inizi https://platform.openai.com/account/api-keys adresinden alabilirsiniz.'
-      );
-    }
-    
-    // Handle quota/rate limit errors
-    if (errorStatus === 429 || errorMessage.includes('quota') || errorMessage.includes('rate limit')) {
-      throw new Error(
-        'OpenAI API quota/rate limit aşıldı. ' +
-        'Lütfen https://platform.openai.com/account/billing adresinden quota durumunuzu kontrol edin.'
-      );
-    }
-    
-    // Re-throw error instead of returning fallback so orchestrator can handle it properly
-    throw new Error(`Flep önerisi oluşturulamadı: ${errorMessage || 'Bilinmeyen hata'}`);
-  }
-}
+### Ana Özellikler:
+1. **Bölge-Spesifik Bilgiler**: 6 farklı yüz bölgesi için özel kriterler
+2. **Flep Seçim Kriterleri**: Defekt boyutu, bölge özellikleri, hasta faktörleri, patoloji
+3. **25+ Detaylı Alan**: Her flep önerisi için kapsamlı bilgi
+4. **Risk Analizi**: Estetik, fonksiyonel, komplikasyon riskleri
+5. **Postoperatif Plan**: Bakım ve takip programı
+6. **Karşılaştırma**: Alternatif fleplerle karşılaştırma
+7. **Kontrendikasyonlar**: Mutlak ve göreceli kontrendikasyonlar
+8. **Cerrahi Bilgiler**: Süre, maliyet, kompleksite, zorluk, kanıt seviyesi
+9. **Profesyonel Çizim**: Koordinat tabanlı cerrahi çizim sistemi
+10. **Tıbbi Kaynak Entegrasyonu**: RAG (Retrieval-Augmented Generation) desteği
+
+### Çıktı Formatı:
+- JSON formatında `{ "flap_suggestions": [...] }`
+- Her flep önerisi 25+ alan içerir
+- Tüm çıktı Türkçe
+- Profesyonel cerrahi çizim koordinatları
+
+### Model Ayarları:
+- Model: `gpt-4o`
+- Max Tokens: 6000
+- Temperature: 0.7
+- Response Format: JSON Object
+
+---
+
+**Dosya Konumu**: `lib/ai/decision.ts`  
+**Son Güncelleme**: Tüm geliştirmeler tamamlandı  
+**Versiyon**: 2.0 (Geliştirilmiş)
 

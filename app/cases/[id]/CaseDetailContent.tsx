@@ -636,10 +636,53 @@ export default function CaseDetailContent({
                         </div>
                       )}
 
-                      <div className="p-3 bg-gradient-to-br from-slate-50 to-gray-50 rounded-xl border border-slate-200">
-                        <span className="text-sm text-gray-600">Estetik Risk:</span>
-                        <span className="ml-2 font-semibold text-gray-900 capitalize">{flap.aesthetic_risk}</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="p-3 bg-gradient-to-br from-slate-50 to-gray-50 rounded-xl border border-slate-200">
+                          <span className="text-sm text-gray-600">Estetik Risk:</span>
+                          <span className="ml-2 font-semibold text-gray-900 capitalize">{flap.aesthetic_risk}</span>
+                        </div>
+                        <div className="p-3 bg-gradient-to-br from-slate-50 to-gray-50 rounded-xl border border-slate-200">
+                          <span className="text-sm text-gray-600">Fonksiyonel Risk:</span>
+                          <span className="ml-2 font-semibold text-gray-900 capitalize">{flap.functional_risk}</span>
+                        </div>
+                        <div className="p-3 bg-gradient-to-br from-slate-50 to-gray-50 rounded-xl border border-slate-200">
+                          <span className="text-sm text-gray-600">Komplikasyon Risk:</span>
+                          <span className="ml-2 font-semibold text-gray-900 capitalize">{flap.complication_risk}</span>
+                        </div>
+                        <div className="p-3 bg-gradient-to-br from-slate-50 to-gray-50 rounded-xl border border-slate-200">
+                          <span className="text-sm text-gray-600">Donor Alan Morbiditesi:</span>
+                          <span className="ml-2 font-semibold text-gray-900 capitalize">
+                            {flap.donor_site_morbidity === 'minimal' ? 'Minimal' : 
+                             flap.donor_site_morbidity === 'moderate' ? 'Orta' : 'Belirgin'}
+                          </span>
+                        </div>
                       </div>
+
+                      {flap.expected_complications && flap.expected_complications.length > 0 && (
+                        <div className="mt-3 p-4 bg-gradient-to-br from-orange-50 to-red-50 rounded-xl border border-orange-100">
+                          <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                            <span className="text-orange-600">⚠️</span> Olası Komplikasyonlar
+                          </h4>
+                          <ul className="list-disc list-inside text-gray-700 space-y-1">
+                            {flap.expected_complications.map((comp, idx) => (
+                              <li key={idx}>{comp}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {flap.prevention_strategies && flap.prevention_strategies.length > 0 && (
+                        <div className="mt-3 p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-100">
+                          <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                            <span className="text-green-600">🛡️</span> Önleme Stratejileri
+                          </h4>
+                          <ul className="list-disc list-inside text-gray-700 space-y-1">
+                            {flap.prevention_strategies.map((strategy, idx) => (
+                              <li key={idx}>{strategy}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
 
                       {flap.surgical_technique && (
                         <div className="mt-4 pt-5 border-t-2 border-gray-200">
@@ -652,6 +695,223 @@ export default function CaseDetailContent({
                         </div>
                       )}
                       
+                      {flap.contraindications && flap.contraindications.length > 0 && (
+                        <div className="mt-4 pt-5 border-t-2 border-gray-200">
+                          <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                            <span className="text-xl">🚫</span> Kontrendikasyonlar
+                          </h4>
+                          <div className="p-4 bg-gradient-to-br from-red-50 to-rose-50 rounded-xl border border-red-100">
+                            <ul className="list-disc list-inside text-gray-700 space-y-1">
+                              {flap.contraindications.map((contra, idx) => (
+                                <li key={idx} className="font-medium">{contra}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      )}
+
+                      {flap.relative_contraindications && flap.relative_contraindications.length > 0 && (
+                        <div className="mt-4 pt-5 border-t-2 border-gray-200">
+                          <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                            <span className="text-xl">⚠️</span> Göreceli Kontrendikasyonlar
+                          </h4>
+                          <div className="p-4 bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl border border-yellow-100">
+                            <ul className="list-disc list-inside text-gray-700 space-y-1">
+                              {flap.relative_contraindications.map((contra, idx) => (
+                                <li key={idx}>{contra}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      )}
+
+                      {flap.when_to_avoid && flap.when_to_avoid !== 'Belirtilmemiş' && (
+                        <div className="mt-4 pt-5 border-t-2 border-gray-200">
+                          <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                            <span className="text-xl">⛔</span> Ne Zaman Kullanılmamalı
+                          </h4>
+                          <div className="p-4 bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl border border-orange-100">
+                            <p className="text-gray-700">{flap.when_to_avoid}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {flap.comparison_with_alternatives && (
+                        <div className="mt-4 pt-5 border-t-2 border-gray-200">
+                          <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                            <span className="text-xl">⚖️</span> Alternatiflerle Karşılaştırma
+                          </h4>
+                          <div className="space-y-3">
+                            {flap.comparison_with_alternatives.better_than && flap.comparison_with_alternatives.better_than.length > 0 && (
+                              <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-100">
+                                <h5 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                  <span className="text-green-600">✅</span> Daha İyi Olduğu Durumlar
+                                </h5>
+                                <ul className="list-disc list-inside text-gray-700 space-y-1">
+                                  {flap.comparison_with_alternatives.better_than.map((item, idx) => (
+                                    <li key={idx}>{item}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {flap.comparison_with_alternatives.worse_than && flap.comparison_with_alternatives.worse_than.length > 0 && (
+                              <div className="p-4 bg-gradient-to-br from-red-50 to-rose-50 rounded-xl border border-red-100">
+                                <h5 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                  <span className="text-red-600">❌</span> Daha Kötü Olduğu Durumlar
+                                </h5>
+                                <ul className="list-disc list-inside text-gray-700 space-y-1">
+                                  {flap.comparison_with_alternatives.worse_than.map((item, idx) => (
+                                    <li key={idx}>{item}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {flap.comparison_with_alternatives.similar_to && flap.comparison_with_alternatives.similar_to.length > 0 && (
+                              <div className="p-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl border border-blue-100">
+                                <h5 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                  <span className="text-blue-600">🔄</span> Benzer Performans Gösteren Flepler
+                                </h5>
+                                <p className="text-gray-700">{flap.comparison_with_alternatives.similar_to.join(', ')}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {flap.postoperative_care && (
+                        <div className="mt-4 pt-5 border-t-2 border-gray-200">
+                          <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                            <span className="text-xl">🏥</span> Postoperatif Bakım Planı
+                          </h4>
+                          <div className="space-y-3">
+                            {flap.postoperative_care.immediate && flap.postoperative_care.immediate.length > 0 && (
+                              <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                                <h5 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                  <span className="text-blue-600">⏰</span> İlk 24 Saat
+                                </h5>
+                                <ul className="list-disc list-inside text-gray-700 space-y-1">
+                                  {flap.postoperative_care.immediate.map((item, idx) => (
+                                    <li key={idx}>{item}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {flap.postoperative_care.early && flap.postoperative_care.early.length > 0 && (
+                              <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-100">
+                                <h5 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                  <span className="text-green-600">📅</span> İlk Hafta
+                                </h5>
+                                <ul className="list-disc list-inside text-gray-700 space-y-1">
+                                  {flap.postoperative_care.early.map((item, idx) => (
+                                    <li key={idx}>{item}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {flap.postoperative_care.late && flap.postoperative_care.late.length > 0 && (
+                              <div className="p-4 bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl border border-purple-100">
+                                <h5 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                  <span className="text-purple-600">📆</span> İlk Ay
+                                </h5>
+                                <ul className="list-disc list-inside text-gray-700 space-y-1">
+                                  {flap.postoperative_care.late.map((item, idx) => (
+                                    <li key={idx}>{item}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {flap.postoperative_care.long_term && flap.postoperative_care.long_term.length > 0 && (
+                              <div className="p-4 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-100">
+                                <h5 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                  <span className="text-amber-600">📊</span> 3+ Ay
+                                </h5>
+                                <ul className="list-disc list-inside text-gray-700 space-y-1">
+                                  {flap.postoperative_care.long_term.map((item, idx) => (
+                                    <li key={idx}>{item}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {flap.follow_up_schedule && (
+                        <div className="mt-4 pt-5 border-t-2 border-gray-200">
+                          <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                            <span className="text-xl">📋</span> Takip Programı
+                          </h4>
+                          <div className="p-4 bg-gradient-to-br from-slate-50 to-gray-50 rounded-xl border border-slate-200">
+                            <div className="space-y-2 text-sm">
+                              <div className="flex items-start gap-3">
+                                <span className="font-semibold text-gray-700 min-w-[80px]">1. Gün:</span>
+                                <span className="text-gray-600">{flap.follow_up_schedule.day_1}</span>
+                              </div>
+                              <div className="flex items-start gap-3">
+                                <span className="font-semibold text-gray-700 min-w-[80px]">7. Gün:</span>
+                                <span className="text-gray-600">{flap.follow_up_schedule.day_7}</span>
+                              </div>
+                              <div className="flex items-start gap-3">
+                                <span className="font-semibold text-gray-700 min-w-[80px]">14. Gün:</span>
+                                <span className="text-gray-600">{flap.follow_up_schedule.day_14}</span>
+                              </div>
+                              <div className="flex items-start gap-3">
+                                <span className="font-semibold text-gray-700 min-w-[80px]">1. Ay:</span>
+                                <span className="text-gray-600">{flap.follow_up_schedule.month_1}</span>
+                              </div>
+                              <div className="flex items-start gap-3">
+                                <span className="font-semibold text-gray-700 min-w-[80px]">3. Ay:</span>
+                                <span className="text-gray-600">{flap.follow_up_schedule.month_3}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="mt-4 pt-5 border-t-2 border-gray-200">
+                        <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                          <span className="text-xl">📊</span> Cerrahi Bilgileri
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {flap.estimated_surgery_time && flap.estimated_surgery_time !== 'Belirtilmemiş' && (
+                            <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                              <span className="text-sm text-gray-600">Tahmini Süre:</span>
+                              <span className="ml-2 font-semibold text-gray-900">{flap.estimated_surgery_time}</span>
+                            </div>
+                          )}
+                          {flap.estimated_cost_range && flap.estimated_cost_range !== 'Belirtilmemiş' && (
+                            <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-100">
+                              <span className="text-sm text-gray-600">Maliyet:</span>
+                              <span className="ml-2 font-semibold text-gray-900">{flap.estimated_cost_range}</span>
+                            </div>
+                          )}
+                          {flap.complexity_level && (
+                            <div className="p-3 bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl border border-purple-100">
+                              <span className="text-sm text-gray-600">Kompleksite:</span>
+                              <span className="ml-2 font-semibold text-gray-900 capitalize">{flap.complexity_level}</span>
+                            </div>
+                          )}
+                          {flap.technical_difficulty && (
+                            <div className="p-3 bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl border border-orange-100">
+                              <span className="text-sm text-gray-600">Teknik Zorluk:</span>
+                              <span className="ml-2 font-semibold text-gray-900 capitalize">{flap.technical_difficulty}</span>
+                            </div>
+                          )}
+                          {flap.evidence_level && (
+                            <div className="p-3 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl border border-cyan-100">
+                              <span className="text-sm text-gray-600">Kanıt Seviyesi:</span>
+                              <span className="ml-2 font-semibold text-gray-900 capitalize">{flap.evidence_level}</span>
+                            </div>
+                          )}
+                          {flap.success_rate && flap.success_rate !== 'Belirtilmemiş' && (
+                            <div className="p-3 bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl border border-emerald-100">
+                              <span className="text-sm text-gray-600">Başarı Oranı:</span>
+                              <span className="ml-2 font-semibold text-gray-900">{flap.success_rate}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
                       {flap.video_link && (
                         <div className="mt-4 pt-5 border-t-2 border-gray-200">
                           <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
