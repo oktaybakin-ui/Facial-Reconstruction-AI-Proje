@@ -35,11 +35,18 @@ FLAP SEÇİM KRİTERLERİ (Öncelik Sırasına Göre):
    - Benign: Minimal margin, estetik öncelik, konservatif yaklaşım
 
 YAPMAN GEREKENLER:
-1. Lokal flep seçenekleri öner ve her flep için detaylı cerrahi teknik bilgisi sağla.
+1. MUTLAKA BİRDEN FAZLA flep seçeneği öner - EN AZ 3-5 farklı flep önerisi yapmalısın. Tek bir flep önerisi YETERLİ DEĞİLDİR.
 2. Her flep için şunları sağla: flap_name, suitability_score (0–100), category (en_uygun | uygun | alternatif), why, advantages, cautions, alternatives, aesthetic_risk, functional_risk, complication_risk, expected_complications, prevention_strategies, donor_site_morbidity, contraindications, relative_contraindications, when_to_avoid, comparison_with_alternatives, postoperative_care, follow_up_schedule, estimated_surgery_time, estimated_cost_range, complexity_level, technical_difficulty, evidence_level, success_rate, surgical_technique, flap_drawing.
 3. Yüz rekonstrüksiyonu ve estetik alt birimlerin temel prensiplerini takip et.
 4. Her flep için ADIM ADIM cerrahi teknik açıkla: insizyon çizgileri, flep mobilizasyonu, defekt kapatma, dikiş teknikleri.
 5. Her flep için fotoğraf üzerinde flep çizimi için koordinatlar sağla (flap_drawing).
+
+FLAP ÖNCELİK SIRALAMASI:
+- En uygun (suitability_score: 85-100): İlk seçenek, en yüksek başarı oranı - EN AZ 1 flep
+- Uygun (suitability_score: 60-84): İyi alternatif, dikkatli değerlendirme gerekli - EN AZ 2 flep
+- Alternatif (suitability_score: 40-59): Son çare, özel durumlar için - EN AZ 1 flep
+
+TOPLAM: Her olgu için MİNİMUM 4-6 farklı flep önerisi yapmalısın. Farklı flep tiplerini öner (örneğin: transpozisyon, rotasyon, advancement, bilobed, interpolasyon flepleri gibi).
 
 Çıktı saf JSON formatında: { "flap_suggestions": [ ... ] }.
 
@@ -236,7 +243,16 @@ Koordinat sistemi: 0-1000 normalize (görüntünün görünen boyutuna göre)
 - defect_location.points dizisindeki koordinatları AYNEN kullan - değiştirme!
 ` : ''}
 
-Uygun lokal flep seçeneklerini uygunluk skorları ve kategorileriyle birlikte öner.
+MUTLAKA BİRDEN FAZLA flep seçeneği öner - EN AZ 4-6 farklı flep önerisi yapmalısın. Tek bir flep önerisi YETERLİ DEĞİLDİR.
+
+Öneriler şunları içermeli:
+- EN AZ 1 "en_uygun" kategorisinde flep (suitability_score: 85-100)
+- EN AZ 2 "uygun" kategorisinde flep (suitability_score: 60-84)
+- EN AZ 1 "alternatif" kategorisinde flep (suitability_score: 40-59)
+
+Farklı flep tiplerini öner: transpozisyon, rotasyon, advancement, bilobed, trilobed, interpolasyon flepleri, rhomboid, vb.
+
+Her flep için uygunluk skorları ve kategorileriyle birlikte detaylı bilgi sağla.
 
 EĞER BULABİLİRSEN, her flep tipi için YouTube'da cerrahi uygulama videosu linki ekle (video_link alanı).
 Örnek: "https://www.youtube.com/watch?v=..." veya "https://youtu.be/..."
