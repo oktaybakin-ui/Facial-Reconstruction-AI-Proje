@@ -4,8 +4,9 @@ import { createServerClient } from '@/lib/supabaseClient';
 import { analyzeVision } from './vision';
 import { suggestFlaps } from './decision';
 import { reviewSafety } from './safety';
+import { generate3DFaceModel } from './face3d';
 import { getRelevantSourcesForCase, formatSourcesForPrompt } from '@/lib/medical/sources';
-import type { AIResult, VisionSummary, FlapSuggestion, SafetyReview } from '@/types/ai';
+import type { AIResult, VisionSummary, FlapSuggestion, SafetyReview, Face3DModel } from '@/types/ai';
 import type { Case } from '@/types/cases';
 
 export async function runCaseAnalysis(
@@ -18,7 +19,9 @@ export async function runCaseAnalysis(
     height: number;
     image_width: number;
     image_height: number;
-  } | null
+  } | null,
+  enable3D?: boolean,
+  faceImages3D?: string[]
 ): Promise<AIResult> {
   // Validate inputs
   if (!caseId || caseId === 'undefined' || caseId.trim() === '') {
@@ -260,11 +263,68 @@ export async function runCaseAnalysis(
     }
   }
   const finalSuggestions = safetyResult.flapSuggestions;
-  const safetyReview: SafetyReview = {
+  
+  // Add 3D model warning to safety review if 3D mode is enabled
+  let safetyReview: SafetyReview = {
     hallucination_risk: safetyResult.hallucination_risk,
     comments: safetyResult.comments,
     legal_disclaimer: safetyResult.legal_disclaimer,
   };
+
+  // Step 3.5: 3D Face Reconstruction (if enabled)
+  let face3DModel: Face3DModel | undefined = undefined;
+  if (enable3D && faceImages3D && faceImages3D.length === 9) {
+    console.log('Starting Step 3.5: 3D Face Reconstruction...');
+    try {
+      const reconstructionResult = await generate3DFaceModel(faceImages3D);
+      
+      face3DModel = {
+        status: reconstructionResult.status,
+        confidence: reconstructionResult.confidence,
+        model_url: reconstructionResult.model_url,
+        images_3d: faceImages3D,
+      };
+
+      if (reconstructionResult.status === 'completed') {
+        console.log('✅ 3D face reconstruction completed');
+      } else if (reconstructionResult.status === 'failed') {
+        console.warn('⚠️ 3D face reconstruction failed:', reconstructionResult.error);
+        // Continue with 2D analysis - don't fail the whole pipeline
+      }
+
+      // Add 3D model warning to safety review
+      const warning3D = 'Uyarı: Bu 3D yüz modeli, fotoğraflardan yapay zekâ ile tahmin edilmiştir. Gerçek cerrahi ölçüm yerine geçmez. Sadece karar destek ve görselleştirme amaçlıdır.';
+      safetyReview.comments = [
+        ...safetyReview.comments,
+        warning3D,
+      ];
+    } catch (error: any) {
+      console.error('❌ 3D face reconstruction failed:', error);
+      // Mark as failed but continue with 2D analysis
+      face3DModel = {
+        status: 'failed',
+        confidence: 'düşük',
+        model_url: null,
+        images_3d: faceImages3D,
+      };
+      
+      // Add warning to safety review
+      const warning3D = 'Uyarı: 3D yüz modeli oluşturulamadı. Analiz 2D modda devam etmektedir.';
+      safetyReview.comments = [
+        ...safetyReview.comments,
+        warning3D,
+      ];
+    }
+  } else if (enable3D) {
+    // 3D enabled but images not provided or wrong count
+    console.warn('⚠️ 3D mode enabled but invalid image count:', faceImages3D?.length || 0);
+    face3DModel = {
+      status: 'failed',
+      confidence: 'düşük',
+      model_url: null,
+      images_3d: faceImages3D || [],
+    };
+  }
 
   // Step 4: Save to database (UPSERT - update if exists, insert if not)
   console.log('Saving AI result for case:', caseId);
@@ -275,12 +335,25 @@ export async function runCaseAnalysis(
     throw new Error(`Geçersiz case ID for save: ${caseId}`);
   }
   
-  const upsertData = {
+  const upsertData: any = {
     case_id: caseId.trim(),
     vision_summary: visionSummary,
     flap_suggestions: finalSuggestions,
     safety_review: safetyReview,
   };
+
+  // Add 3D fields if 3D mode is enabled
+  if (enable3D) {
+    upsertData.enable_3d = true;
+    upsertData.face_images_3d = faceImages3D || [];
+    if (face3DModel) {
+      upsertData.face_3d_status = face3DModel.status;
+      upsertData.face_3d_confidence = face3DModel.confidence;
+      upsertData.face_3d_model_url = face3DModel.model_url;
+    }
+  } else {
+    upsertData.enable_3d = false;
+  }
   
   console.log('Upsert data prepared:', { 
     case_id: upsertData.case_id, 
@@ -368,7 +441,7 @@ export async function runCaseAnalysis(
   }
 
   // Return formatted result
-  return {
+  const result: AIResult = {
     id: aiResult.id,
     case_id: caseId,
     vision_summary: visionSummary,
@@ -376,5 +449,15 @@ export async function runCaseAnalysis(
     safety_review: safetyReview,
     created_at: aiResult.created_at,
   };
+
+  // Add 3D fields if available
+  if (enable3D) {
+    result.enable_3d = true;
+    if (face3DModel) {
+      result.face_3d = face3DModel;
+    }
+  }
+
+  return result;
 }
 

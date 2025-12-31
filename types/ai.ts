@@ -114,6 +114,17 @@ export interface SafetyReview {
   legal_disclaimer: string;
 }
 
+// 3D Face Model Types
+export type Face3DStatus = 'pending' | 'completed' | 'failed';
+export type Face3DConfidence = 'düşük' | 'orta' | 'yüksek';
+
+export interface Face3DModel {
+  status: Face3DStatus;
+  confidence: Face3DConfidence | null;
+  model_url: string | null;
+  images_3d: string[]; // URLs of the 9 face images used
+}
+
 export interface AIResult {
   id: string;
   case_id: string;
@@ -121,5 +132,8 @@ export interface AIResult {
   flap_suggestions: FlapSuggestion[];
   safety_review: SafetyReview;
   created_at: string;
+  // 3D Face Model fields (optional for backward compatibility)
+  enable_3d?: boolean;
+  face_3d?: Face3DModel;
 }
 

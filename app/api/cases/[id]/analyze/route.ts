@@ -19,12 +19,26 @@ export async function POST(
     const body = await request.json();
     const userId = body.user_id;
     const manualAnnotation = body.manual_annotation || null;
+    const enable3D = body.enable_3d === true; // Explicitly check for true
+    const faceImages3D = body.face_images_3d || null; // Array of 9 image URLs
 
     console.log('Request body:', body);
     console.log('Extracted userId:', userId);
     console.log('Manual annotation received:', manualAnnotation);
     console.log('Manual annotation exists:', !!manualAnnotation);
+    console.log('3D mode enabled:', enable3D);
+    console.log('3D images count:', faceImages3D?.length || 0);
     console.log('Type of userId:', typeof userId);
+
+    // Validate 3D mode requirements
+    if (enable3D) {
+      if (!faceImages3D || !Array.isArray(faceImages3D) || faceImages3D.length !== 9) {
+        return NextResponse.json({
+          error: '3D mod için 9 adet fotoğraf zorunludur',
+          details: `Şu an yüklenen: ${faceImages3D?.length || 0} adet. 3D mod için tam olarak 9 adet farklı açıdan çekilmiş yüz fotoğrafı gereklidir.`,
+        }, { status: 400 });
+      }
+    }
 
     if (!userId || userId === 'undefined' || userId === 'null' || userId.trim() === '') {
       console.error('No userId provided or invalid:', userId);
@@ -46,7 +60,13 @@ export async function POST(
     console.log('Case ID:', caseId);
 
     // Run AI analysis (it will verify case ownership internally)
-    const result = await runCaseAnalysis(caseId, userId, manualAnnotation);
+    const result = await runCaseAnalysis(
+      caseId, 
+      userId, 
+      manualAnnotation,
+      enable3D,
+      faceImages3D
+    );
 
     return NextResponse.json(
       { result, message: 'AI analizi tamamlandı' },

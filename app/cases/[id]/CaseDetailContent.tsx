@@ -10,6 +10,8 @@ import type { Case, CasePhoto } from '@/types/cases';
 import type { AIResult, FlapSuggestion } from '@/types/ai';
 import { useConfirmDialog } from '@/components/ConfirmDialog';
 import { useToast } from '@/components/Toast';
+import ThreeDToggle from '@/components/ui/ThreeDToggle';
+import MultiPhotoUpload from '@/components/ui/MultiPhotoUpload';
 
 interface CaseDetailContentProps {
   caseData: Case;
@@ -44,6 +46,8 @@ export default function CaseDetailContent({
   const [imageInfo, setImageInfo] = useState<{ naturalWidth: number; naturalHeight: number; displayedWidth: number; displayedHeight: number } | null>(null);
   const [showFlapDrawings, setShowFlapDrawings] = useState(true);
   const [selectedFlapIndex, setSelectedFlapIndex] = useState<number | undefined>(undefined);
+  const [enable3D, setEnable3D] = useState(false);
+  const [faceImages3D, setFaceImages3D] = useState<string[]>([]);
 
   const preopPhoto = photos.find((p) => p.type === 'preop');
   const postopPhotos = photos.filter((p) => p.type === 'postop');
@@ -159,10 +163,24 @@ export default function CaseDetailContent({
         throw new Error('Görüntü bilgisi eksik. Lütfen sayfayı yenileyip tekrar deneyin.');
       }
 
-      const requestBody = { 
+      // Validate 3D mode requirements
+      if (enable3D) {
+        if (!faceImages3D || faceImages3D.length !== 9) {
+          throw new Error(`3D mod için 9 adet fotoğraf zorunludur. Şu an yüklenen: ${faceImages3D.length} adet.`);
+        }
+      }
+
+      const requestBody: any = { 
         user_id: userId,
         manual_annotation: normalizedAnnotation,
       };
+
+      // Add 3D parameters if enabled
+      if (enable3D) {
+        requestBody.enable_3d = true;
+        requestBody.face_images_3d = faceImages3D;
+      }
+
       console.log('Request body to send:', requestBody);
 
       const response = await fetch(`/api/cases/${caseData.id}/analyze`, {
@@ -456,13 +474,45 @@ export default function CaseDetailContent({
                         </div>
                       </div>
                     </div>
-                    <button
-                      onClick={handleAnalyze}
-                      disabled={analyzing}
-                      className="btn-primary w-full sm:w-auto text-lg"
-                    >
-                      {analyzing ? '🤖 Analiz ediliyor...' : '🚀 AI Analizi Çalıştır →'}
-                    </button>
+
+                    {/* 3D Mode Toggle */}
+                    <ThreeDToggle
+                      enabled={enable3D}
+                      onChange={setEnable3D}
+                      className="mt-4"
+                    />
+
+                    {/* 3D Multi-Photo Upload */}
+                    {enable3D && (
+                      <div className="mt-4">
+                        <MultiPhotoUpload
+                          caseId={caseData.id}
+                          onUploadComplete={setFaceImages3D}
+                          maxPhotos={9}
+                          requiredPhotos={9}
+                        />
+                      </div>
+                    )}
+
+                    {/* Analyze Button */}
+                    <div className="mt-6">
+                      <button
+                        onClick={handleAnalyze}
+                        disabled={analyzing || (enable3D && faceImages3D.length !== 9)}
+                        className={`btn-primary w-full sm:w-auto text-lg ${
+                          enable3D && faceImages3D.length !== 9
+                            ? 'opacity-50 cursor-not-allowed'
+                            : ''
+                        }`}
+                      >
+                        {analyzing ? '🤖 Analiz ediliyor...' : '🚀 AI Analizi Çalıştır →'}
+                      </button>
+                      {enable3D && faceImages3D.length !== 9 && (
+                        <p className="mt-2 text-sm text-red-600">
+                          3D mod için 9 adet fotoğraf yüklemelisiniz. Şu an: {faceImages3D.length} / 9
+                        </p>
+                      )}
+                    </div>
                   </>
                 )}
               </div>
