@@ -41,6 +41,13 @@ export default function UnifiedImageOverlay({
   const [currentAnnotation, setCurrentAnnotation] = useState<Annotation | null>(annotation || null);
   const [startPos, setStartPos] = useState<{ x: number; y: number } | null>(null);
   const [imageInfo, setImageInfo] = useState<{ naturalWidth: number; naturalHeight: number; displayedWidth: number; displayedHeight: number } | null>(null);
+  
+  // Expose imageInfo to parent via callback (for anatomical overlay)
+  useEffect(() => {
+    if (imageInfo && (window as any).onImageInfoUpdate) {
+      (window as any).onImageInfoUpdate(imageInfo);
+    }
+  }, [imageInfo]);
   const [currentShape, setCurrentShape] = useState<AnnotationShape>(annotationShape);
 
   useEffect(() => {

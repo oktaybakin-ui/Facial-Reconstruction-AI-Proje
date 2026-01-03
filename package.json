@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node setup-env.js && next dev",
+    "dev": "node setup-env.js && next dev -p 3001 --webpack",
     "build": "node setup-env.js && next build",
     "start": "next start",
     "lint": "next lint",
@@ -19,7 +19,16 @@
     "openai": "^4.70.1",
     "@anthropic-ai/sdk": "^0.70.1",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.4"
+    "tailwind-merge": "^2.5.4",
+    "@tensorflow/tfjs": "^4.15.0",
+    "@tensorflow-models/face-landmarks-detection": "^1.0.6",
+    "@gltf-transform/core": "^4.2.1",
+    "@gltf-transform/functions": "^4.2.1",
+    "sharp": "^0.34.5",
+    "canvg": "^4.0.1",
+    "html2canvas": "^1.4.1",
+    "three": "^0.169.0",
+    "@types/three": "^0.169.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

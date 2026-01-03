@@ -5,6 +5,7 @@ import { analyzeVision } from './vision';
 import { suggestFlaps } from './decision';
 import { reviewSafety } from './safety';
 import { generate3DFaceModel } from './face3d';
+import { validateFlapDrawing } from './validation';
 import { getRelevantSourcesForCase, formatSourcesForPrompt } from '@/lib/medical/sources';
 import type { AIResult, VisionSummary, FlapSuggestion, SafetyReview, Face3DModel } from '@/types/ai';
 import type { Case } from '@/types/cases';
@@ -262,7 +263,44 @@ export async function runCaseAnalysis(
       };
     }
   }
-  const finalSuggestions = safetyResult.flapSuggestions;
+  let finalSuggestions = safetyResult.flapSuggestions;
+  
+  // Step 2.5: Validate flap drawings (optional - can be async/background)
+  console.log('Starting Step 2.5: Flap drawing validation...');
+  try {
+    // Validate each flap drawing if it exists
+    const validationPromises = finalSuggestions.map(async (flap) => {
+      if (!flap.flap_drawing || !preopPhotoUrl) {
+        return flap; // Skip validation if no drawing or photo
+      }
+      
+      try {
+        const validationResult = await validateFlapDrawing(
+          preopPhotoUrl,
+          flap,
+          visionSummary,
+          1000, // Normalized width
+          1000  // Normalized height
+        );
+        
+        // Add validation result to flap
+        return {
+          ...flap,
+          validation: validationResult,
+        };
+      } catch (validationError: any) {
+        console.warn(`⚠️ Validation failed for flap ${flap.flap_name}:`, validationError.message);
+        // Continue without validation if it fails
+        return flap;
+      }
+    });
+    
+    finalSuggestions = await Promise.all(validationPromises);
+    console.log('✅ Flap drawing validation completed');
+  } catch (error: any) {
+    console.warn('⚠️ Flap validation step failed, continuing without validation:', error.message);
+    // Don't fail the whole analysis if validation fails
+  }
   
   // Add 3D model warning to safety review if 3D mode is enabled
   let safetyReview: SafetyReview = {
@@ -276,7 +314,7 @@ export async function runCaseAnalysis(
   if (enable3D && faceImages3D && faceImages3D.length === 9) {
     console.log('Starting Step 3.5: 3D Face Reconstruction...');
     try {
-      const reconstructionResult = await generate3DFaceModel(faceImages3D);
+      const reconstructionResult = await generate3DFaceModel(faceImages3D, caseId);
       
       face3DModel = {
         status: reconstructionResult.status,

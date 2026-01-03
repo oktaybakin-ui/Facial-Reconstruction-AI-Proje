@@ -106,6 +106,8 @@ export interface FlapSuggestion {
       label?: string;
     }>;
   };
+  // Validation results (optional - added after validation)
+  validation?: import('./validation').ValidationResult;
 }
 
 export interface SafetyReview {

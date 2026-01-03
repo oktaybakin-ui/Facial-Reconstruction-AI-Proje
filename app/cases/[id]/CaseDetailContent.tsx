@@ -12,6 +12,13 @@ import { useConfirmDialog } from '@/components/ConfirmDialog';
 import { useToast } from '@/components/Toast';
 import ThreeDToggle from '@/components/ui/ThreeDToggle';
 import MultiPhotoUpload from '@/components/ui/MultiPhotoUpload';
+import ValidationScoreBadge from '@/components/ui/ValidationScoreBadge';
+import ValidationIssuesList from '@/components/ui/ValidationIssuesList';
+import AnatomicalOverlay from '@/components/ui/AnatomicalOverlay';
+import VectorExportButton from '@/components/ui/VectorExportButton';
+import FeedbackDialog from '@/components/ui/FeedbackDialog';
+import Face3DViewer from '@/components/ui/Face3DViewer';
+import { validateFlapDrawingClient } from '@/lib/face-detection/validation-client';
 
 interface CaseDetailContentProps {
   caseData: Case;
@@ -48,6 +55,11 @@ export default function CaseDetailContent({
   const [selectedFlapIndex, setSelectedFlapIndex] = useState<number | undefined>(undefined);
   const [enable3D, setEnable3D] = useState(false);
   const [faceImages3D, setFaceImages3D] = useState<string[]>([]);
+  const [showAnatomicalOverlay, setShowAnatomicalOverlay] = useState(false);
+  const [overlayType, setOverlayType] = useState<'guide-lines' | 'golden-ratio' | 'muscle-map' | 'bone-map'>('guide-lines');
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [selectedFlapForFeedback, setSelectedFlapForFeedback] = useState<{ index: number; name: string } | null>(null);
+  const [validatingClient, setValidatingClient] = useState<{ [key: number]: boolean }>({});
 
   const preopPhoto = photos.find((p) => p.type === 'preop');
   const postopPhotos = photos.filter((p) => p.type === 'postop');
@@ -423,19 +435,33 @@ export default function CaseDetailContent({
               </div>
             </div>
             <div className="relative w-full max-w-2xl mx-auto bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl overflow-hidden shadow-2xl mb-6 p-4 border border-white/50">
-              <UnifiedImageOverlay
-                imageUrl={preopPhoto.url}
-                annotation={annotation}
-                onAnnotationChange={(ann, info) => {
-                  setAnnotation(ann);
-                  if (info) setImageInfo(info);
-                }}
-                flapSuggestions={showFlapDrawings && analysisResult ? analysisResult.flap_suggestions : []}
-                selectedFlapIndex={selectedFlapIndex}
-                showAnnotationMode={showAnnotation}
-                annotationShape={annotationShape}
-                onShapeChange={(shape) => setAnnotationShape(shape)}
-              />
+              <div className="relative">
+                <UnifiedImageOverlay
+                  imageUrl={preopPhoto.url}
+                  annotation={annotation}
+                  onAnnotationChange={(ann, info) => {
+                    setAnnotation(ann);
+                    if (info) setImageInfo(info);
+                  }}
+                  flapSuggestions={showFlapDrawings && analysisResult ? analysisResult.flap_suggestions : []}
+                  selectedFlapIndex={selectedFlapIndex}
+                  showAnnotationMode={showAnnotation}
+                  annotationShape={annotationShape}
+                  onShapeChange={(shape) => setAnnotationShape(shape)}
+                />
+                {showAnatomicalOverlay && imageInfo && (
+                  <AnatomicalOverlay
+                    imageUrl={preopPhoto.url}
+                    overlayType={overlayType}
+                    visible={showAnatomicalOverlay}
+                    opacity={0.6}
+                    imageWidth={imageInfo.naturalWidth}
+                    imageHeight={imageInfo.naturalHeight}
+                    displayedWidth={imageInfo.displayedWidth}
+                    displayedHeight={imageInfo.displayedHeight}
+                  />
+                )}
+              </div>
               {annotation && (
                 <div className="mt-3 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl text-sm text-indigo-800 font-medium">
                   ✅ Lezyon işaretlendi: {Math.round(annotation.width)}px × {Math.round(annotation.height)}px
@@ -599,6 +625,59 @@ export default function CaseDetailContent({
               </div>
             </div>
 
+            {/* 3D Face Model Section */}
+            {analysisResult?.enable_3d && analysisResult?.face_3d && (
+              <div className="card-hover">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                    <span className="text-xl">🎭</span>
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">3D Yüz Modeli</h2>
+                </div>
+                
+                <Face3DViewer
+                  modelUrl={analysisResult.face_3d.model_url}
+                  status={analysisResult.face_3d.status}
+                  confidence={analysisResult.face_3d.confidence}
+                  onError={(error) => {
+                    console.error('3D Viewer error:', error);
+                    setError(`3D model görüntüleme hatası: ${error}`);
+                  }}
+                />
+                
+                {analysisResult.face_3d.status === 'completed' && (
+                  <div className="mt-4 p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-100">
+                    <p className="text-sm text-gray-700">
+                      <strong>Not:</strong> Bu 3D yüz modeli, fotoğraflardan yapay zekâ ile tahmin edilmiştir. 
+                      Gerçek cerrahi ölçüm yerine geçmez. Sadece karar destek ve görselleştirme amaçlıdır.
+                    </p>
+                  </div>
+                )}
+                
+                {analysisResult.face_3d.images_3d && analysisResult.face_3d.images_3d.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                      Kullanılan Fotoğraflar ({analysisResult.face_3d.images_3d.length} adet)
+                    </h4>
+                    <div className="grid grid-cols-3 gap-2">
+                      {analysisResult.face_3d.images_3d.map((url, index) => (
+                        <div key={index} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                          <img
+                            src={url}
+                            alt={`3D view ${index + 1}`}
+                            className="object-cover w-full h-full"
+                          />
+                          <span className="absolute bottom-1 right-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
+                            {index + 1}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Modern Flap Suggestions */}
             <div className="card-hover">
               <div className="flex items-center gap-3 mb-6">
@@ -629,19 +708,49 @@ export default function CaseDetailContent({
                           </span>
                         </div>
                       </div>
-                      {flap.flap_drawing && (
-                        <button
-                          onClick={() => {
-                            setSelectedFlapIndex(selectedFlapIndex === index ? undefined : index);
-                            setShowFlapDrawings(true);
-                            setShowAnnotation(false);
-                          }}
-                          className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all text-sm font-medium shadow-md hover:shadow-lg whitespace-nowrap"
-                        >
-                          {selectedFlapIndex === index ? '✕ Çizimi Kapat' : '📐 Fotoğrafta Göster'}
-                        </button>
-                      )}
+                      <div className="flex gap-2 flex-wrap">
+                        {flap.flap_drawing && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setSelectedFlapIndex(selectedFlapIndex === index ? undefined : index);
+                                setShowFlapDrawings(true);
+                                setShowAnnotation(false);
+                              }}
+                              className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all text-sm font-medium shadow-md hover:shadow-lg whitespace-nowrap"
+                            >
+                              {selectedFlapIndex === index ? '✕ Çizimi Kapat' : '📐 Fotoğrafta Göster'}
+                            </button>
+                            {preopPhoto && (
+                              <VectorExportButton
+                                imageUrl={preopPhoto.url}
+                                flapSuggestion={flap}
+                              />
+                            )}
+                            <button
+                              onClick={() => {
+                                setSelectedFlapForFeedback({ index, name: flap.flap_name });
+                                setFeedbackDialogOpen(true);
+                              }}
+                              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all text-sm font-medium shadow-md hover:shadow-lg whitespace-nowrap"
+                            >
+                              💬 Geri Bildirim
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Validation Results */}
+                    {flap.validation && (
+                      <div className="mb-4 pt-4 border-t-2 border-gray-200 space-y-4">
+                        <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                          <span className="text-xl">✅</span> Çizim Doğruluk Analizi
+                        </h4>
+                        <ValidationScoreBadge validation={flap.validation} />
+                        <ValidationIssuesList validation={flap.validation} />
+                      </div>
+                    )}
 
                     <div className="space-y-5">
                       <div className="p-4 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-100">
@@ -1063,6 +1172,23 @@ export default function CaseDetailContent({
           )}
         </div>
       </main>
+
+      {/* Feedback Dialog */}
+      {feedbackDialogOpen && selectedFlapForFeedback && (
+        <FeedbackDialog
+          caseId={caseData.id}
+          flapSuggestionId={`flap-${selectedFlapForFeedback.index}`}
+          flapName={selectedFlapForFeedback.name}
+          isOpen={feedbackDialogOpen}
+          onClose={() => {
+            setFeedbackDialogOpen(false);
+            setSelectedFlapForFeedback(null);
+          }}
+          onFeedbackSubmitted={() => {
+            success('Geri bildiriminiz kaydedildi. Teşekkürler!');
+          }}
+        />
+      )}
     </div>
   );
 }

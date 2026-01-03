@@ -1,12 +1,17 @@
 'use server';
 
 import type { Face3DStatus, Face3DConfidence } from '@/types/ai';
+import { downloadAndPreprocessImage, detectFaceLandmarks, generateFaceMesh } from './face3d-utils';
+import { multiViewReconstructionPython, checkPythonService } from './face3d-python-client';
+import { createGLBFromMesh } from './glb-generator';
+import { uploadGLBToStorage } from './storage-utils';
+import { createServerClient } from '@/lib/supabaseClient';
 
 /**
  * 3D Face Reconstruction Service
  * 
  * This service generates a 3D face model from multiple angle photographs.
- * Currently implemented as a placeholder - will be replaced with actual AI model integration.
+ * Uses face landmarks detection and mesh generation to create GLB models.
  */
 
 export interface Face3DReconstructionResult {
@@ -17,9 +22,31 @@ export interface Face3DReconstructionResult {
 }
 
 /**
+ * Calculates confidence based on reconstruction quality metrics
+ */
+function calculateConfidence(
+  landmarksDetected: number,
+  totalImages: number,
+  meshQuality: number
+): Face3DConfidence {
+  // Simple confidence calculation
+  const detectionRate = landmarksDetected / totalImages;
+  const averageQuality = (detectionRate + meshQuality) / 2;
+
+  if (averageQuality >= 0.8) {
+    return 'yüksek';
+  } else if (averageQuality >= 0.5) {
+    return 'orta';
+  } else {
+    return 'düşük';
+  }
+}
+
+/**
  * Generates a 3D face model from 9 different angle photographs
  * 
  * @param imageUrls Array of 9 image URLs (from different angles)
+ * @param caseId Case ID for organizing files in storage
  * @returns Promise with reconstruction result
  * 
  * Required angles:
@@ -30,7 +57,8 @@ export interface Face3DReconstructionResult {
  * - Right profile (90°), Left profile (90°)
  */
 export async function generate3DFaceModel(
-  imageUrls: string[]
+  imageUrls: string[],
+  caseId?: string
 ): Promise<Face3DReconstructionResult> {
   // Validation: Must have exactly 9 images
   if (!imageUrls || imageUrls.length !== 9) {
@@ -58,71 +86,139 @@ export async function generate3DFaceModel(
     console.log('Starting 3D face reconstruction...');
     console.log(`Processing ${imageUrls.length} images`);
 
-    // TODO: Replace with actual AI model integration
-    // Placeholder implementation - simulates 3D reconstruction
-    // In production, this would:
-    // 1. Download images from URLs
-    // 2. Preprocess images (resize, normalize, etc.)
-    // 3. Call AI model (e.g., MediaPipe, OpenCV, or custom ML model)
-    // 4. Generate 3D mesh/geometry
-    // 5. Export as .glb or .obj file
-    // 6. Upload to storage (Supabase Storage)
-    // 7. Return model URL
-
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Placeholder: For now, return a simulated result
-    // In production, replace this with actual model generation
-    const simulatedModelUrl = null; // Will be actual model URL in production
-    const simulatedConfidence: Face3DConfidence = 'orta'; // Will be calculated from model output
-
-    // For now, we'll mark as completed but without actual model
-    // This allows the pipeline to continue while we develop the actual model
-    console.log('3D face reconstruction completed (placeholder)');
-
-    return {
-      status: 'completed',
-      confidence: simulatedConfidence,
-      model_url: simulatedModelUrl,
-    };
-
-    /* 
-    // Example of actual implementation structure:
-    
-    // 1. Download and preprocess images
+    // Step 1: Download and preprocess images
+    console.log('Step 1: Downloading and preprocessing images...');
     const processedImages = await Promise.all(
-      imageUrls.map(async (url) => {
-        const response = await fetch(url);
-        const buffer = await response.arrayBuffer();
-        // Preprocess: resize, normalize, etc.
-        return preprocessImage(buffer);
+      imageUrls.map(async (url, index) => {
+        try {
+          console.log(`Processing image ${index + 1}/${imageUrls.length}...`);
+          return await downloadAndPreprocessImage(url);
+        } catch (error: any) {
+          console.error(`Error processing image ${index + 1}:`, error);
+          throw new Error(`Image ${index + 1} işlenemedi: ${error.message}`);
+        }
       })
     );
 
-    // 2. Call AI model (example with hypothetical API)
-    const modelResponse = await call3DReconstructionModel(processedImages);
+    // Step 2: Multi-view reconstruction using Python service (if available)
+    console.log('Step 2: Multi-view face reconstruction...');
+    let landmarksDetected = 0;
+    const landmarksResults: Array<any> = [];
+    let reconstructionQuality = 0.5; // Default quality
+    let usePythonService = false;
+
+    // Try to use Python service for multi-view reconstruction
+    try {
+      const pythonServiceAvailable = await checkPythonService();
+      if (pythonServiceAvailable) {
+        console.log('Python service available, using multi-view reconstruction...');
+        usePythonService = true;
+        
+        const multiViewResult = await multiViewReconstructionPython(imageUrls);
+        if (multiViewResult && multiViewResult.landmarks_list.length > 0) {
+          // Convert Python service response to our format
+          for (const landmarksResp of multiViewResult.landmarks_list) {
+            landmarksResults.push({
+              keypoints: landmarksResp.landmarks.map((lm, idx) => ({
+                x: lm.x,
+                y: lm.y,
+                z: lm.z,
+                name: `landmark_${idx}`,
+              })),
+              confidence: landmarksResp.confidence,
+              bounding_box: landmarksResp.bounding_box,
+              pose_angles: landmarksResp.pose_angles,
+            });
+          }
+          
+          landmarksDetected = multiViewResult.landmarks_list.length;
+          reconstructionQuality = multiViewResult.reconstruction_quality;
+          
+          if (multiViewResult.warnings.length > 0) {
+            console.warn('Multi-view reconstruction warnings:', multiViewResult.warnings);
+          }
+        }
+      } else {
+        console.log('Python service not available, using fallback detection...');
+      }
+    } catch (error: any) {
+      console.warn('Python service error, falling back to basic detection:', error.message);
+    }
+
+    // Fallback: Detect face landmarks individually if Python service not used
+    if (!usePythonService || landmarksResults.length === 0) {
+      console.log('Step 2 (fallback): Detecting face landmarks individually...');
+      for (let i = 0; i < processedImages.length; i++) {
+        try {
+          const landmarks = await detectFaceLandmarks(processedImages[i], imageUrls[i]);
+          if (landmarks) {
+            landmarksDetected++;
+            landmarksResults.push(landmarks);
+          }
+        } catch (error: any) {
+          console.warn(`Face detection failed for image ${i + 1}:`, error.message);
+          // Continue with other images
+        }
+      }
+    }
+
+    // Step 3: Generate 3D mesh
+    console.log('Step 3: Generating 3D mesh...');
+    let mesh;
     
-    // 3. Generate 3D mesh
-    const mesh = generateMesh(modelResponse);
+    if (landmarksResults.length > 0) {
+      // Use detected landmarks to generate mesh
+      // If we have multiple views, we can use them for better reconstruction
+      mesh = generateFaceMesh(landmarksResults);
+    } else {
+      // Fallback: Generate a basic face-shaped mesh
+      console.log('No landmarks detected, using basic face mesh generation...');
+      mesh = generateFaceMesh([]);
+    }
+
+    // Step 4: Export to GLB format
+    console.log('Step 4: Exporting to GLB format...');
+    const glbBuffer = await createGLBFromMesh(mesh, {
+      name: 'Face 3D Model',
+      author: 'Facial Reconstruction AI',
+    });
+
+    // Step 5: Use provided case ID or extract from URL
+    // The case ID is needed for organizing files in storage
+    let finalCaseId = caseId;
+    if (!finalCaseId) {
+      // Try to extract from first image URL
+      const caseIdMatch = imageUrls[0]?.match(/cases\/([^/]+)/);
+      finalCaseId = caseIdMatch ? caseIdMatch[1] : `temp-${Date.now()}`;
+    }
+
+    // Step 6: Upload to Supabase Storage
+    console.log('Step 5: Uploading to storage...');
+    const modelUrl = await uploadGLBToStorage(glbBuffer, finalCaseId);
+
+    // Step 7: Calculate confidence
+    // Use reconstruction quality from Python service if available, otherwise estimate
+    const meshQuality = usePythonService && reconstructionQuality > 0 
+      ? reconstructionQuality 
+      : (landmarksResults.length > 0 ? 0.7 : 0.4);
     
-    // 4. Export to GLB format
-    const glbBuffer = exportToGLB(mesh);
-    
-    // 5. Upload to Supabase Storage
-    const modelUrl = await uploadToStorage(glbBuffer, 'face-3d-models');
-    
-    // 6. Calculate confidence from model metrics
-    const confidence = calculateConfidence(modelResponse.metrics);
-    
+    const confidence = calculateConfidence(
+      landmarksDetected,
+      imageUrls.length,
+      meshQuality
+    );
+
+    console.log('✅ 3D face reconstruction completed successfully');
+    console.log(`Model URL: ${modelUrl}`);
+    console.log(`Confidence: ${confidence}`);
+
     return {
       status: 'completed',
       confidence,
       model_url: modelUrl,
     };
-    */
   } catch (error: any) {
-    console.error('3D face reconstruction failed:', error);
+    console.error('❌ 3D face reconstruction failed:', error);
     return {
       status: 'failed',
       confidence: 'düşük',

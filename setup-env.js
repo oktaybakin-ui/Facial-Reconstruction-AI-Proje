@@ -62,7 +62,7 @@ if (fs.existsSync(envSourceFile)) {
     console.log('\n⚠️  Bazı key\'ler eksik olabilir. Lütfen kontrol edin.');
   }
 } else {
-  console.log('❌ vercel-env.txt dosyası bulunamadı!');
+  console.log('⚠️  vercel-env.txt dosyası bulunamadı!');
   console.log('📝 Lütfen önce vercel-env.txt dosyasını oluşturun.');
   console.log('💡 Alternatif: npm run setup-keys komutunu çalıştırın.');
   
@@ -70,7 +70,10 @@ if (fs.existsSync(envSourceFile)) {
   if (fs.existsSync(envTargetFile)) {
     console.log('ℹ️  Mevcut .env.local dosyası kullanılacak.');
   } else {
-    process.exit(1);
+    console.log('⚠️  .env.local dosyası bulunamadı. Sunucu başlatılıyor ancak environment variable\'lar eksik olabilir.');
+    console.log('💡 Environment variable\'lar sistem ortam değişkenlerinden yüklenecek veya manuel olarak .env.local oluşturulmalı.');
+    // Hata vermeden devam et, environment variable'lar sistemden yüklenecek
+    process.exit(0);
   }
 }
 
