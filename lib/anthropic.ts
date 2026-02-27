@@ -8,7 +8,7 @@ let cachedClient: Anthropic | null = null;
 export function getAnthropicClient(): Anthropic {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error(
-      'Anthropic API key bulunamadı. Lütfen .env.local dosyasında ANTHROPIC_API_KEY değişkenini ayarlayın.'
+      'ANTHROPIC_API_KEY bulunamadı. Lütfen Vercel Dashboard → Settings → Environment Variables bölümünden ANTHROPIC_API_KEY ekleyin ve redeploy yapın.'
     );
   }
   if (!cachedClient) {

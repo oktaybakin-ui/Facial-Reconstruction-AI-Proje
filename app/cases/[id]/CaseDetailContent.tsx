@@ -202,7 +202,18 @@ export default function CaseDetailContent({
         body: JSON.stringify(requestBody),
       });
 
-      const data = await response.json();
+      // Handle non-JSON responses (e.g. 504 timeout from Vercel)
+      let data;
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        if (response.status === 504) {
+          throw new Error('AI analizi zaman aşımına uğradı. Sunucu yanıt vermedi. Lütfen tekrar deneyin.');
+        }
+        throw new Error(`Sunucu hatası (${response.status}): ${text.substring(0, 200)}`);
+      }
 
       if (!response.ok) {
         console.error('AI Analysis error:', data);

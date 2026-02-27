@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabaseClient';
 import { runCaseAnalysis } from '@/lib/ai/orchestrator';
 
+// AI analysis pipeline needs more time (vision + decision + safety)
+export const maxDuration = 120;
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -63,13 +66,19 @@ export async function POST(
     let errorMessage = rawMessage || 'AI analizi başarısız';
     let hint = undefined;
 
-    // Check for OpenAI API key errors
-    if (rawMessage?.includes('OpenAI API key') || rawMessage?.includes('Incorrect API key') || rawMessage?.includes('401')) {
+    // Check for API key errors
+    if (rawMessage?.includes('ANTHROPIC_API_KEY') || rawMessage?.includes('x-api-key') || rawMessage?.includes('authentication_error')) {
+      errorMessage = 'Anthropic API key eksik veya geçersiz. Vercel Dashboard\'da ANTHROPIC_API_KEY environment variable\'ını ekleyin.';
+      hint = 'Vercel Dashboard → Settings → Environment Variables → ANTHROPIC_API_KEY ekleyin, ardından Redeploy yapın.';
+    } else if (rawMessage?.includes('OpenAI API key') || rawMessage?.includes('Incorrect API key')) {
       errorMessage = 'OpenAI API key geçersiz veya eksik. Lütfen Vercel Dashboard\'da OPENAI_API_KEY environment variable\'ını kontrol edin.';
       hint = 'API key\'inizi https://platform.openai.com/account/api-keys adresinden alabilirsiniz.';
-    } else if (rawMessage?.includes('quota') || rawMessage?.includes('rate limit') || rawMessage?.includes('429')) {
-      errorMessage = 'OpenAI API quota/rate limit aşıldı.';
-      hint = 'Lütfen https://platform.openai.com/account/billing adresinden quota durumunuzu kontrol edin.';
+    } else if (rawMessage?.includes('401') || rawMessage?.includes('invalid_api_key')) {
+      errorMessage = 'API key geçersiz (OpenAI veya Anthropic). Vercel Dashboard\'da environment variable\'ları kontrol edin.';
+      hint = 'Hem OPENAI_API_KEY hem ANTHROPIC_API_KEY tanımlı ve geçerli olmalı.';
+    } else if (rawMessage?.includes('quota') || rawMessage?.includes('rate limit') || rawMessage?.includes('429') || rawMessage?.includes('overloaded') || rawMessage?.includes('529')) {
+      errorMessage = 'API rate limit veya quota aşıldı.';
+      hint = 'Birkaç dakika bekleyip tekrar deneyin. Sorun devam ederse billing durumunuzu kontrol edin.';
     } else if (rawMessage?.includes('Olgu bulunamadı') || rawMessage?.includes('Case not found') || rawMessage?.includes('not found')) {
       errorMessage = 'Olgu bulunamadı. Lütfen sayfayı yenileyip tekrar deneyin.';
       hint = caseId ? `Aranan Case ID: ${caseId}` : 'Case ID bulunamadı';
