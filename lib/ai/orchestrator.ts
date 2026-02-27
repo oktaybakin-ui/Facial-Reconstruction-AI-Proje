@@ -5,8 +5,9 @@ import { analyzeVision, extractAnatomicalLandmarks } from './vision';
 import { suggestFlaps } from './decision';
 import { reviewSafety } from './safety';
 import { generate3DFaceModel } from './face3d';
-import { validateFlapDrawing } from './validation';
-import { generateCorrectionSuggestions, applyCorrections } from './postprocessing';
+// Validation skipped for Vercel Hobby 60s limit - can be re-enabled on Pro plan
+// import { validateFlapDrawing } from './validation';
+// import { generateCorrectionSuggestions, applyCorrections } from './postprocessing';
 import { getRelevantSourcesForCase, formatSourcesForPrompt } from '@/lib/medical/sources';
 import { resolveStorageUrl } from '@/lib/actions/storage';
 import type { AIResult, VisionSummary, FlapSuggestion, SafetyReview, Face3DModel } from '@/types/ai';
@@ -207,7 +208,8 @@ export async function runCaseAnalysis(
     throw new Error(`Flep önerisi başarısız: ${errorMsg}${errorDetails ? ` | Detay: ${errorDetails}` : ''}`);
   }
 
-  // Step 3 + 3.5: Run safety review AND validation in PARALLEL for speed
+  // Step 3: Safety review only (validation skipped for Vercel Hobby 60s limit)
+  // Pipeline: Vision(~15s) + Landmarks+Sources(~10s) + Decision(~15s) + Safety(~15s) = ~55s
   const minimalSafetyReview = {
     hallucination_risk: 'orta' as const,
     comments: ['Güvenlik incelemesi tamamlanamadı. Lütfen manuel kontrol yapın.'],
@@ -215,61 +217,19 @@ export async function runCaseAnalysis(
     flapSuggestions: flapSuggestions,
   };
 
-  const [safetySettled, validationSettled] = await Promise.allSettled([
-    // Safety review
-    reviewSafety(visionSummary, flapSuggestions).catch((error: unknown) => {
-      console.error('Safety review failed:', error);
-      const errorMsg = error instanceof Error ? error.message : 'Bilinmeyen hata';
-      return {
-        ...minimalSafetyReview,
-        comments: [`Güvenlik incelemesi tamamlanamadı: ${errorMsg}. Lütfen manuel kontrol yapın.`],
-      };
-    }),
-    // Validation (parallel with safety - no dependency)
-    Promise.all(flapSuggestions.map(async (flap) => {
-      if (!flap.flap_drawing || !preopPhotoUrl) return flap;
-      try {
-        const validationResult = await validateFlapDrawing(preopPhotoUrl, flap, visionSummary, 1000, 1000);
-        let resultFlap = { ...flap, validation: validationResult };
+  let safetyResult;
+  try {
+    safetyResult = await reviewSafety(visionSummary, flapSuggestions);
+  } catch (error: unknown) {
+    console.error('Safety review failed:', error);
+    const errorMsg = error instanceof Error ? error.message : 'Bilinmeyen hata';
+    safetyResult = {
+      ...minimalSafetyReview,
+      comments: [`Güvenlik incelemesi tamamlanamadı: ${errorMsg}. Lütfen manuel kontrol yapın.`],
+    };
+  }
 
-        // Auto-correction for critical issues
-        const criticalIssues = validationResult.detectedIssues?.filter(
-          (i: { severity: string }) => i.severity === 'yüksek'
-        ) || [];
-
-        if (criticalIssues.length > 0) {
-          try {
-            const corrections = generateCorrectionSuggestions(validationResult, flap, visionSummary);
-            if (corrections.length > 0) {
-              const corrected = applyCorrections(flap, corrections);
-              resultFlap = { ...corrected, validation: validationResult };
-              console.info(`✅ Auto-correction applied for flap "${flap.flap_name}": ${criticalIssues.length} critical issues`);
-            }
-          } catch (correctionError: unknown) {
-            console.warn(`⚠️ Auto-correction failed for flap ${flap.flap_name}:`, correctionError instanceof Error ? correctionError.message : String(correctionError));
-          }
-        }
-        return resultFlap;
-      } catch (validationError: unknown) {
-        console.warn(`⚠️ Validation failed for flap ${flap.flap_name}:`, validationError instanceof Error ? validationError.message : String(validationError));
-        return flap;
-      }
-    })).catch(() => flapSuggestions),
-  ]);
-
-  // Merge results: safety review modifies suggestions, validation adds validation data
-  const safetyResult = safetySettled.status === 'fulfilled' ? safetySettled.value : minimalSafetyReview;
-  const validatedFlaps = validationSettled.status === 'fulfilled' ? validationSettled.value : flapSuggestions;
-
-  // Merge safety-reviewed suggestions with validation data
-  const safetySuggestions = safetyResult.flapSuggestions || flapSuggestions;
-  let finalSuggestions: FlapSuggestion[] = safetySuggestions.map((safeFlap, idx) => {
-    const validated = validatedFlaps[idx];
-    if (validated && 'validation' in validated) {
-      return { ...safeFlap, validation: validated.validation } as FlapSuggestion;
-    }
-    return safeFlap;
-  });
+  let finalSuggestions: FlapSuggestion[] = safetyResult.flapSuggestions || flapSuggestions;
   
   // Add 3D model warning to safety review if 3D mode is enabled
   const safetyReview: SafetyReview = {
