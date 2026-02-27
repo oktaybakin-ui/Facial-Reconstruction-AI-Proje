@@ -154,7 +154,7 @@ interface DashboardContentProps {
 
 export default function DashboardContent({ user, profile }: DashboardContentProps) {
   const router = useRouter();
-  useI18n(); // keep provider active
+  const { t } = useI18n();
   const { confirm } = useConfirmDialog();
   const { success, error: showError } = useToast();
   const [cases, setCases] = useState<Case[]>([]);
@@ -211,15 +211,15 @@ export default function DashboardContent({ user, profile }: DashboardContentProp
 
   const handleDeleteCase = async (caseId: string, caseCode: string) => {
     confirm({
-      title: 'Olgu Sil',
-      message: `"${caseCode}" olgusunu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`,
-      confirmText: 'Sil',
-      cancelText: 'İptal',
+      title: t('dashboard.deleteCase'),
+      message: `"${caseCode}" ${t('dashboard.deleteCaseConfirm')}`,
+      confirmText: t('dashboard.delete'),
+      cancelText: t('dashboard.cancel'),
       onConfirm: async () => {
         try {
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) {
-            showError('Oturum açmanız gerekiyor');
+            showError(t('dashboard.sessionRequired'));
             return;
           }
 
@@ -229,14 +229,14 @@ export default function DashboardContent({ user, profile }: DashboardContentProp
 
           if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || 'Olgu silinemedi');
+            throw new Error(errorData.error || t('dashboard.deleteFailed'));
           }
 
-          success('Olgu başarıyla silindi');
+          success(t('dashboard.deleteSuccess'));
           loadCases(); // Refresh the list
         } catch (err: unknown) {
           console.error('Error deleting case:', err);
-          showError(err instanceof Error ? err.message : 'Olgu silinirken bir hata oluştu');
+          showError(err instanceof Error ? err.message : t('dashboard.deleteError'));
         }
       },
     });
@@ -244,10 +244,10 @@ export default function DashboardContent({ user, profile }: DashboardContentProp
 
   const getStatusBadge = (status: string) => {
     const config: Record<string, { bg: string; text: string; label: string }> = {
-      planned: { bg: 'bg-blue-50 border border-blue-200', text: 'text-blue-700', label: 'Planlı' },
-      operated: { bg: 'bg-emerald-50 border border-emerald-200', text: 'text-emerald-700', label: 'Opere' },
-      postop_follow: { bg: 'bg-amber-50 border border-amber-200', text: 'text-amber-700', label: 'Takip' },
-      completed: { bg: 'bg-slate-50 border border-slate-200', text: 'text-slate-600', label: 'Tamamlandı' },
+      planned: { bg: 'bg-blue-50 border border-blue-200', text: 'text-blue-700', label: t('dashboard.planned') },
+      operated: { bg: 'bg-emerald-50 border border-emerald-200', text: 'text-emerald-700', label: t('dashboard.operated') },
+      postop_follow: { bg: 'bg-amber-50 border border-amber-200', text: 'text-amber-700', label: t('dashboard.followup') },
+      completed: { bg: 'bg-slate-50 border border-slate-200', text: 'text-slate-600', label: t('dashboard.completed') },
     };
     return config[status] || config.completed;
   };
@@ -281,19 +281,19 @@ export default function DashboardContent({ user, profile }: DashboardContentProp
                 <Link href="/admin">
                   <Button variant="ghost" size="sm">
                     <IconCog className="w-4 h-4" />
-                    <span className="hidden sm:inline">Yönetici</span>
+                    <span className="hidden sm:inline">{t('dashboard.admin')}</span>
                   </Button>
                 </Link>
               )}
               <Link href="/knowledge-base">
                 <Button variant="ghost" size="sm">
                   <IconBook className="w-4 h-4" />
-                  <span className="hidden sm:inline">Bilgi Tabanı</span>
+                  <span className="hidden sm:inline">{t('dashboard.knowledgeBase')}</span>
                 </Button>
               </Link>
               <Button variant="ghost" size="sm" onClick={handleSignOut}>
                 <IconLogout className="w-4 h-4" />
-                <span className="hidden sm:inline">Çıkış</span>
+                <span className="hidden sm:inline">{t('dashboard.signOut')}</span>
               </Button>
             </div>
           </div>
@@ -309,16 +309,16 @@ export default function DashboardContent({ user, profile }: DashboardContentProp
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-              Hoşgeldiniz, {profile.full_name}
+              {t('dashboard.welcome')}, {profile.full_name}
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Olgularınızı yönetin ve takip edin
+              {t('dashboard.manageCase')}
             </p>
           </div>
           <Link href="/cases/new">
             <Button size="md">
               <IconPlus className="w-4 h-4" />
-              Yeni Olgu
+              {t('dashboard.newCase')}
             </Button>
           </Link>
         </div>
@@ -330,25 +330,25 @@ export default function DashboardContent({ user, profile }: DashboardContentProp
           <StatCard
             icon={<IconClipboardList className="w-6 h-6" />}
             value={stats.total}
-            label="Toplam Olgu"
+            label={t('dashboard.totalCases')}
             accentColor="bg-cyan-700"
           />
           <StatCard
             icon={<IconCalendar className="w-6 h-6" />}
             value={stats.planned}
-            label="Planlı"
+            label={t('dashboard.planned')}
             accentColor="bg-blue-500"
           />
           <StatCard
             icon={<IconCheckCircle className="w-6 h-6" />}
             value={stats.operated}
-            label="Opere"
+            label={t('dashboard.operated')}
             accentColor="bg-emerald-500"
           />
           <StatCard
             icon={<IconBell className="w-6 h-6" />}
             value={stats.followup}
-            label="Takip"
+            label={t('dashboard.followup')}
             accentColor="bg-amber-500"
           />
         </div>
@@ -359,9 +359,9 @@ export default function DashboardContent({ user, profile }: DashboardContentProp
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           {/* Section Header */}
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900">Olgular</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t('dashboard.cases')}</h2>
             <span className="text-xs font-medium text-slate-400">
-              {stats.total} kayıt
+              {stats.total} {t('dashboard.records')}
             </span>
           </div>
 
@@ -372,7 +372,7 @@ export default function DashboardContent({ user, profile }: DashboardContentProp
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
-              <p className="text-sm text-slate-400 mt-3">Olgular yükleniyor...</p>
+              <p className="text-sm text-slate-400 mt-3">{t('dashboard.loading')}</p>
             </div>
 
           /* Empty State */
@@ -382,15 +382,15 @@ export default function DashboardContent({ user, profile }: DashboardContentProp
                 <IconFolder className="w-8 h-8 text-slate-400" />
               </div>
               <h3 className="text-base font-semibold text-slate-900 mb-1">
-                Henüz olgu yok
+                {t('dashboard.noCases')}
               </h3>
               <p className="text-sm text-slate-500 mb-6 max-w-xs mx-auto">
-                İlk olgunuzu ekleyerek AI destekli yüz rekonstrüksiyon analizine başlayın.
+                {t('dashboard.addFirstCase')}
               </p>
               <Link href="/cases/new">
                 <Button size="md">
                   <IconPlus className="w-4 h-4" />
-                  İlk Olgunuzu Ekleyin
+                  {t('dashboard.addFirstCaseBtn')}
                 </Button>
               </Link>
             </div>
@@ -402,19 +402,19 @@ export default function DashboardContent({ user, profile }: DashboardContentProp
                 <thead>
                   <tr className="bg-slate-50">
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      Olgu Kodu
+                      {t('dashboard.table.caseCode')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      Bölge
+                      {t('dashboard.table.region')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      Tarih
+                      {t('dashboard.table.date')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      Durum
+                      {t('dashboard.table.status')}
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      İşlemler
+                      {t('dashboard.table.actions')}
                     </th>
                   </tr>
                 </thead>
@@ -466,7 +466,7 @@ export default function DashboardContent({ user, profile }: DashboardContentProp
                             <Link href={`/cases/${caseItem.id}`}>
                               <button
                                 className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-cyan-700 hover:bg-cyan-50 transition-colors duration-150"
-                                title="Görüntüle"
+                                title={t('dashboard.view')}
                               >
                                 <IconEye />
                               </button>
@@ -476,7 +476,7 @@ export default function DashboardContent({ user, profile }: DashboardContentProp
                             <Link href={`/cases/${caseItem.id}/edit`}>
                               <button
                                 className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors duration-150"
-                                title="Düzenle"
+                                title={t('dashboard.edit')}
                               >
                                 <IconPencil />
                               </button>
@@ -486,7 +486,7 @@ export default function DashboardContent({ user, profile }: DashboardContentProp
                             <button
                               onClick={() => handleDeleteCase(caseItem.id, caseItem.case_code)}
                               className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors duration-150"
-                              title="Sil"
+                              title={t('dashboard.delete')}
                             >
                               <IconTrash />
                             </button>

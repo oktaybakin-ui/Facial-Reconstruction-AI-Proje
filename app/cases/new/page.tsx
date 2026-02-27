@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { useI18n } from '@/lib/i18n/context';
 import type { Sex, DepthCategory } from '@/types/cases';
 
 const regions = [
@@ -30,12 +31,6 @@ const criticalStructuresOptions = [
   'Columella',
   'Philtrum',
   'Diğer',
-];
-
-const STEPS = [
-  { id: 1, title: 'Hasta Bilgileri', description: 'Temel hasta ve vaka bilgileri' },
-  { id: 2, title: 'Defekt Bilgileri', description: 'Lezyon ve defekt detayları' },
-  { id: 3, title: 'Fotoğraf & Kaydet', description: 'Fotoğraf yükle ve kaydet' },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -111,13 +106,13 @@ function ArrowRightIcon({ className }: { className?: string }) {
 /*  Step Progress Bar                                                  */
 /* ------------------------------------------------------------------ */
 
-function StepProgressBar({ currentStep }: { currentStep: number }) {
+function StepProgressBar({ currentStep, steps }: { currentStep: number; steps: { id: number; title: string; description: string }[] }) {
   const stepIcons = [UserIcon, ClipboardIcon, CameraIcon];
 
   return (
     <nav aria-label="Progress" className="mb-8">
       <ol className="flex items-center justify-between">
-        {STEPS.map((step, idx) => {
+        {steps.map((step, idx) => {
           const StepIcon = stepIcons[idx];
           const isCompleted = currentStep > step.id;
           const isCurrent = currentStep === step.id;
@@ -125,7 +120,7 @@ function StepProgressBar({ currentStep }: { currentStep: number }) {
           return (
             <li key={step.id} className="flex-1 flex flex-col items-center relative">
               {/* Connector line */}
-              {idx < STEPS.length - 1 && (
+              {idx < steps.length - 1 && (
                 <div className="hidden sm:block absolute top-5 left-[calc(50%+20px)] w-[calc(100%-40px)] h-0.5">
                   <div
                     className={`h-full transition-colors duration-300 ${
@@ -183,6 +178,7 @@ function StepProgressBar({ currentStep }: { currentStep: number }) {
 
 export default function NewCasePage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -211,6 +207,12 @@ export default function NewCasePage() {
     operation_date: '',
     followup_days: '21',
   });
+
+  const STEPS = useMemo(() => [
+    { id: 1, title: t('case.new.step1'), description: t('case.new.step1Desc') },
+    { id: 2, title: t('case.new.step2'), description: t('case.new.step2Desc') },
+    { id: 3, title: t('case.new.step3'), description: t('case.new.step3Desc') },
+  ], [t]);
 
   /* ---- Photo handling ---- */
 
@@ -285,7 +287,7 @@ export default function NewCasePage() {
 
     // Validate: pre-op photo is required
     if (!photoFile) {
-      setError('Pre-op fotoğraf zorunludur. Lütfen bir fotoğraf yükleyin.');
+      setError(t('case.new.photoRequired'));
       return;
     }
 
@@ -293,7 +295,7 @@ export default function NewCasePage() {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Oturum açmanız gerekli');
+      if (!user) throw new Error(t('common.sessionExpired'));
 
       const response = await fetch('/api/cases', {
         method: 'POST',
@@ -382,7 +384,7 @@ export default function NewCasePage() {
       window.location.href = `/cases/${caseId}`;
     } catch (err: unknown) {
       console.error('Error creating case:', err);
-      setError(err instanceof Error ? err.message : 'Bir hata oluştu');
+      setError(err instanceof Error ? err.message : t('common.error'));
       setLoading(false);
     }
   };
@@ -416,9 +418,9 @@ export default function NewCasePage() {
   const goToNextStep = () => {
     if (!canProceedFromStep(currentStep)) {
       if (currentStep === 1) {
-        setStepErrors('Olgu Kodu / Protokol No alanı zorunludur.');
+        setStepErrors(t('case.new.caseCodeRequired'));
       } else if (currentStep === 2) {
-        setStepErrors('Lezyon Bölgesi seçimi zorunludur.');
+        setStepErrors(t('case.new.regionRequired'));
       }
       return;
     }
@@ -450,7 +452,7 @@ export default function NewCasePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href="/dashboard" className="text-xl font-bold text-cyan-700">
-              {`AI Yüz Rekonstrüksiyon Platformu`}
+              {t('common.platformName')}
             </Link>
             <Link href="/dashboard">
               <Button variant="ghost" size="sm">
@@ -465,12 +467,12 @@ export default function NewCasePage() {
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Yeni Olgu Ekle</h1>
-          <p className="text-sm text-slate-500 mt-1">{`Hasta bilgilerini ve defekt detaylarını girin`}</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('case.new.title')}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t('case.new.subtitle')}</p>
         </div>
 
         {/* Step Progress */}
-        <StepProgressBar currentStep={currentStep} />
+        <StepProgressBar currentStep={currentStep} steps={STEPS} />
 
         {/* Error banner */}
         {(error || stepErrors) && (
@@ -502,8 +504,8 @@ export default function NewCasePage() {
                   <UserIcon className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-900">Hasta Bilgileri</h2>
-                  <p className="text-xs text-slate-500">Temel hasta ve vaka bilgileri</p>
+                  <h2 className="text-lg font-semibold text-slate-900">{t('case.new.step1')}</h2>
+                  <p className="text-xs text-slate-500">{t('case.new.step1Desc')}</p>
                 </div>
               </div>
 
@@ -511,14 +513,14 @@ export default function NewCasePage() {
                 {/* Case code & Age */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <Input
-                    label="Olgu Kodu / Protokol No"
+                    label={t('case.new.caseCode')}
                     required
                     value={formData.case_code}
                     onChange={(e) => setFormData({ ...formData, case_code: e.target.value })}
-                    placeholder={'Örneğin: CASE-2024-001'}
+                    placeholder={t('case.new.caseCodePlaceholder')}
                   />
                   <Input
-                    label={`Yaş`}
+                    label={t('case.new.age')}
                     type="number"
                     min={0}
                     max={120}
@@ -530,35 +532,35 @@ export default function NewCasePage() {
 
                 {/* Sex */}
                 <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-slate-700">Cinsiyet</label>
+                  <label className="block text-sm font-medium text-slate-700">{t('case.new.sex')}</label>
                   <select
                     value={formData.sex}
                     onChange={(e) => setFormData({ ...formData, sex: e.target.value as Sex })}
                     className={selectClass}
                   >
-                    <option value="">{`Seçiniz`}</option>
-                    <option value="M">Erkek</option>
-                    <option value="F">{`Kadın`}</option>
-                    <option value="Other">{`Diğer`}</option>
+                    <option value="">{t('case.new.select')}</option>
+                    <option value="M">{t('case.new.male')}</option>
+                    <option value="F">{t('case.new.female')}</option>
+                    <option value="Other">{t('case.new.other')}</option>
                   </select>
                 </div>
 
                 {/* Case date / time / duration row */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                   <Input
-                    label="Vaka Tarihi"
+                    label={t('case.new.caseDate')}
                     type="date"
                     value={formData.case_date}
                     onChange={(e) => setFormData({ ...formData, case_date: e.target.value })}
                   />
                   <Input
-                    label="Vaka Saati"
+                    label={t('case.new.caseTime')}
                     type="time"
                     value={formData.case_time}
                     onChange={(e) => setFormData({ ...formData, case_time: e.target.value })}
                   />
                   <Input
-                    label={`Vaka Süresi (dakika)`}
+                    label={t('case.new.caseDuration')}
                     type="number"
                     min={0}
                     value={formData.case_duration_minutes}
@@ -570,19 +572,19 @@ export default function NewCasePage() {
                 {/* Operation date / Followup */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <Input
-                    label="Operasyon Tarihi"
+                    label={t('case.new.operationDate')}
                     type="date"
                     value={formData.operation_date}
                     onChange={(e) => setFormData({ ...formData, operation_date: e.target.value })}
                   />
                   <Input
-                    label={`Kontrol Süresi (gün)`}
+                    label={t('case.new.followupDays')}
                     type="number"
                     min={1}
                     value={formData.followup_days}
                     onChange={(e) => setFormData({ ...formData, followup_days: e.target.value })}
                     placeholder={`Varsayılan: 21 gün`}
-                    hint={`Kontrol tarihi otomatik hesaplanacak`}
+                    hint={t('case.new.followupHint')}
                   />
                 </div>
               </div>
@@ -599,8 +601,8 @@ export default function NewCasePage() {
                   <ClipboardIcon className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-900">Defekt Bilgileri</h2>
-                  <p className="text-xs text-slate-500">{`Lezyon bölgesi, boyut ve özellikler`}</p>
+                  <h2 className="text-lg font-semibold text-slate-900">{t('case.new.step2')}</h2>
+                  <p className="text-xs text-slate-500">{t('case.new.step2Desc')}</p>
                 </div>
               </div>
 
@@ -608,7 +610,7 @@ export default function NewCasePage() {
                 {/* Region */}
                 <div className="space-y-1.5">
                   <label className="block text-sm font-medium text-slate-700">
-                    {`Lezyon Bölgesi`} <span className="text-red-500 ml-0.5">*</span>
+                    {t('case.new.region')} <span className="text-red-500 ml-0.5">*</span>
                   </label>
                   <select
                     required
@@ -616,7 +618,7 @@ export default function NewCasePage() {
                     onChange={(e) => setFormData({ ...formData, region: e.target.value })}
                     className={selectClass}
                   >
-                    <option value="">{`Seçiniz`}</option>
+                    <option value="">{t('case.new.select')}</option>
                     {regions.map((region) => (
                       <option key={region} value={region}>
                         {region}
@@ -628,7 +630,7 @@ export default function NewCasePage() {
                 {/* Dimensions */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <Input
-                    label={`Defekt Boyutu (mm) – En`}
+                    label={t('case.new.width')}
                     type="number"
                     step={0.1}
                     min={0}
@@ -637,7 +639,7 @@ export default function NewCasePage() {
                     placeholder={'Örn: 15.0'}
                   />
                   <Input
-                    label={`Defekt Boyutu (mm) – Boy`}
+                    label={t('case.new.height')}
                     type="number"
                     step={0.1}
                     min={0}
@@ -649,23 +651,23 @@ export default function NewCasePage() {
 
                 {/* Depth */}
                 <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-slate-700">Derinlik</label>
+                  <label className="block text-sm font-medium text-slate-700">{t('case.new.depth')}</label>
                   <select
                     value={formData.depth}
                     onChange={(e) => setFormData({ ...formData, depth: e.target.value as DepthCategory })}
                     className={selectClass}
                   >
-                    <option value="">{`Seçiniz`}</option>
-                    <option value="skin">Cilt</option>
-                    <option value="skin+subcutis">Cilt+Subkutan</option>
-                    <option value="muscle">Kas</option>
-                    <option value="mucosa">Mukozaya Uzanan</option>
+                    <option value="">{t('case.new.select')}</option>
+                    <option value="skin">{t('case.new.depthSkin')}</option>
+                    <option value="skin+subcutis">{t('case.new.depthSkinSubcutis')}</option>
+                    <option value="muscle">{t('case.new.depthMuscle')}</option>
+                    <option value="mucosa">{t('case.new.depthMucosa')}</option>
                   </select>
                 </div>
 
                 {/* Pathology */}
                 <Input
-                  label="Tahmini Patoloji"
+                  label={t('case.new.pathology')}
                   value={formData.pathology_suspected}
                   onChange={(e) => setFormData({ ...formData, pathology_suspected: e.target.value })}
                   placeholder={'Örn: BCC, SCC, vb.'}
@@ -680,7 +682,7 @@ export default function NewCasePage() {
                       onChange={(e) => setFormData({ ...formData, previous_surgery: e.target.checked })}
                       className={checkboxClass}
                     />
-                    <span className="text-sm text-slate-700 group-hover:text-slate-900">{`Önceki Cerrahi Var mı?`}</span>
+                    <span className="text-sm text-slate-700 group-hover:text-slate-900">{t('case.new.previousSurgery')}</span>
                   </label>
 
                   <label className="flex items-center gap-3 cursor-pointer group">
@@ -690,13 +692,13 @@ export default function NewCasePage() {
                       onChange={(e) => setFormData({ ...formData, previous_radiotherapy: e.target.checked })}
                       className={checkboxClass}
                     />
-                    <span className="text-sm text-slate-700 group-hover:text-slate-900">{`Önceki Radyoterapi Var mı?`}</span>
+                    <span className="text-sm text-slate-700 group-hover:text-slate-900">{t('case.new.previousRadiotherapy')}</span>
                   </label>
                 </div>
 
                 {/* Critical Structures */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-700">{`Kritik Yapılar`}</label>
+                  <label className="block text-sm font-medium text-slate-700">{t('case.new.criticalStructures')}</label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {criticalStructuresOptions.map((structure) => (
                       <label
@@ -724,7 +726,7 @@ export default function NewCasePage() {
                     className={checkboxClass}
                   />
                   <span className="text-sm text-slate-700 group-hover:text-slate-900 font-medium">
-                    {`Yüksek Estetik Zon`}
+                    {t('case.new.highAestheticZone')}
                   </span>
                 </label>
               </div>
@@ -741,8 +743,8 @@ export default function NewCasePage() {
                   <CameraIcon className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-900">{`Fotoğraf & Kaydet`}</h2>
-                  <p className="text-xs text-slate-500">{`Pre-op fotoğraf yükleyin ve olguyu kaydedin`}</p>
+                  <h2 className="text-lg font-semibold text-slate-900">{t('case.new.step3')}</h2>
+                  <p className="text-xs text-slate-500">{t('case.new.step3Desc')}</p>
                 </div>
               </div>
 
@@ -750,7 +752,7 @@ export default function NewCasePage() {
                 {/* Drag & Drop upload zone */}
                 <div className="space-y-1.5">
                   <label className="block text-sm font-medium text-slate-700">
-                    {`Pre-op Fotoğraf`} <span className="text-red-500 ml-0.5">*</span>
+                    {t('case.new.preopPhoto')} <span className="text-red-500 ml-0.5">*</span>
                   </label>
 
                   {!photoUrl ? (
@@ -771,9 +773,9 @@ export default function NewCasePage() {
                         }`}
                       />
                       <p className="text-sm font-medium text-slate-700">
-                        {`Dosya Seç veya Sürükle Bırak`}
+                        {t('case.new.dragDrop')}
                       </p>
-                      <p className="text-xs text-slate-500 mt-1">PNG, JPG, WEBP - Maks. 10MB</p>
+                      <p className="text-xs text-slate-500 mt-1">{t('case.new.fileTypes')}</p>
 
                       {uploadingPhoto && (
                         <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-xl">
@@ -797,7 +799,7 @@ export default function NewCasePage() {
                     <div className="relative group rounded-xl overflow-hidden border border-slate-200">
                       <img
                         src={photoUrl}
-                        alt={`Pre-op önizleme`}
+                        alt={t('case.new.preview')}
                         className="w-full max-h-[320px] object-contain bg-slate-50"
                       />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200 flex items-center justify-center">
@@ -807,7 +809,7 @@ export default function NewCasePage() {
                           className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white rounded-lg shadow-md px-4 py-2 flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
                           <TrashIcon className="w-4 h-4" />
-                          {`Kaldır`}
+                          {t('case.new.remove')}
                         </button>
                       </div>
                       <div className="px-4 py-3 bg-white border-t border-slate-200 flex items-center justify-between">
@@ -828,16 +830,16 @@ export default function NewCasePage() {
                 {/* Patient special condition (notes) */}
                 <div className="space-y-1.5">
                   <label className="block text-sm font-medium text-slate-700">
-                    {`Hastanın Özel Durumu / Özelliği`}
+                    {t('case.new.patientCondition')}
                   </label>
                   <textarea
                     value={formData.patient_special_condition}
                     onChange={(e) => setFormData({ ...formData, patient_special_condition: e.target.value })}
                     rows={4}
                     className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-600/20 focus:border-cyan-600 hover:border-slate-300 transition-colors duration-150 resize-none"
-                    placeholder={'Örn: Diyabet, hipertansiyon, alerji, önceki cerrahi, vb.'}
+                    placeholder={t('case.new.patientConditionPlaceholder')}
                   />
-                  <p className="text-xs text-slate-500">{`Operasyon öncesi önemli notlar ve hasta özellikleri`}</p>
+                  <p className="text-xs text-slate-500">{t('case.new.patientConditionHint')}</p>
                 </div>
               </div>
             </div>
@@ -851,12 +853,12 @@ export default function NewCasePage() {
               {currentStep > 1 ? (
                 <Button type="button" variant="secondary" size="lg" onClick={goToPrevStep}>
                   <ArrowLeftIcon className="w-4 h-4" />
-                  Geri
+                  {t('case.new.back')}
                 </Button>
               ) : (
                 <Link href="/dashboard">
                   <Button type="button" variant="secondary" size="lg">
-                    {`İptal`}
+                    {t('case.new.cancel')}
                   </Button>
                 </Link>
               )}
@@ -865,18 +867,18 @@ export default function NewCasePage() {
             <div className="flex items-center gap-3">
               {currentStep < 3 ? (
                 <Button type="button" variant="primary" size="lg" onClick={goToNextStep}>
-                  Sonraki
+                  {t('case.new.next')}
                   <ArrowRightIcon className="w-4 h-4" />
                 </Button>
               ) : (
                 <div className="flex items-center gap-3">
                   {!photoFile && (
                     <p className="text-sm text-amber-600 font-medium">
-                      Fotoğraf yükleyin
+                      {t('case.new.uploadPhoto')}
                     </p>
                   )}
                   <Button type="submit" variant="primary" size="lg" loading={loading} disabled={!photoFile}>
-                    Kaydet
+                    {t('case.new.save')}
                   </Button>
                 </div>
               )}

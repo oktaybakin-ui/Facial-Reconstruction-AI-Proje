@@ -76,7 +76,7 @@ export default function LoginPage() {
 
       <AuthFormApple
         title={t('nav.login')}
-        subtitle="AI destekli cerrahi planlama platformuna erişin"
+        subtitle={t('auth.login.subtitle')}
       >
         {/* Error Alert */}
         {error && (
@@ -92,7 +92,7 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <Input
-            label="E-posta"
+            label={t('auth.login.email')}
             type="email"
             placeholder="ornek@email.com"
             value={formData.email}
@@ -102,9 +102,9 @@ export default function LoginPage() {
           />
 
           <Input
-            label="Parola"
+            label={t('auth.login.password')}
             type="password"
-            placeholder="Parolanizi girin"
+            placeholder={t('auth.login.passwordPlaceholder')}
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             required
@@ -128,7 +128,7 @@ export default function LoginPage() {
         {/* Register Link */}
         <div className="mt-8 text-center">
           <p className="text-sm text-slate-500">
-            Hesabiniz yok mu?{' '}
+            {t('auth.login.noAccount')}{' '}
             <Link
               href="/auth/register"
               className="font-semibold text-cyan-700 hover:text-cyan-800 transition-colors"

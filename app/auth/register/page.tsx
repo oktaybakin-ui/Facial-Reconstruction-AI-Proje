@@ -47,7 +47,7 @@ export default function RegisterPage() {
         throw new Error(data.error || 'Registration failed');
       }
 
-      window.alert('Registration successful! Your account is pending verification. Redirecting to login...');
+      window.alert(t('auth.register.success'));
       router.push('/auth/login');
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
@@ -72,7 +72,7 @@ export default function RegisterPage() {
 
       <AuthFormApple
         title={t('nav.register')}
-        subtitle="Saglik profesyonelleri icin AI platformuna katil"
+        subtitle={t('auth.register.subtitle')}
         className="max-w-2xl"
       >
         {/* Error Alert */}
@@ -91,14 +91,14 @@ export default function RegisterPage() {
           {/* Personal Information Section */}
           <div>
             <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-4">
-              Kisisel Bilgiler
+              {t('auth.register.personalInfo')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label="TC Kimlik No"
+                label={t('auth.register.tcKimlik')}
                 type="text"
                 maxLength={11}
-                placeholder="11 haneli TC kimlik numarasi"
+                placeholder={t('auth.register.tcPlaceholder')}
                 value={formData.tc_kimlik_no}
                 onChange={(e) => setFormData({ ...formData, tc_kimlik_no: e.target.value })}
                 required
@@ -106,9 +106,9 @@ export default function RegisterPage() {
               />
 
               <Input
-                label="Ad Soyad"
+                label={t('auth.register.fullName')}
                 type="text"
-                placeholder="Adiniz ve soyadiniz"
+                placeholder={t('auth.register.fullNamePlaceholder')}
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                 required
@@ -116,7 +116,7 @@ export default function RegisterPage() {
               />
 
               <Input
-                label="E-posta"
+                label={t('auth.register.email')}
                 type="email"
                 placeholder="ornek@email.com"
                 value={formData.email}
@@ -126,9 +126,9 @@ export default function RegisterPage() {
               />
 
               <Input
-                label="Parola"
+                label={t('auth.register.password')}
                 type="password"
-                placeholder="Parolanizi belirleyin"
+                placeholder={t('auth.register.passwordPlaceholder')}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
@@ -136,7 +136,7 @@ export default function RegisterPage() {
               />
 
               <Input
-                label="Telefon"
+                label={t('auth.register.phone')}
                 type="tel"
                 placeholder="05XX XXX XX XX"
                 value={formData.phone}
@@ -148,7 +148,7 @@ export default function RegisterPage() {
               {/* Specialty Select */}
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-slate-700">
-                  Uzmanlik Alani<span className="text-red-500 ml-0.5">*</span>
+                  {t('auth.register.specialty')}<span className="text-red-500 ml-0.5">*</span>
                 </label>
                 <select
                   required
@@ -157,7 +157,7 @@ export default function RegisterPage() {
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-600/20 focus:border-cyan-600 hover:border-slate-300 transition-colors duration-150 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
                   disabled={loading}
                 >
-                  <option value="">Secin</option>
+                  <option value="">{t('auth.register.selectSpecialty')}</option>
                   {specialties.map((spec) => (
                     <option key={spec} value={spec}>
                       {spec}
@@ -171,27 +171,27 @@ export default function RegisterPage() {
           {/* Institution Information Section */}
           <div>
             <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-4">
-              Kurum Bilgileri
+              {t('auth.register.institutionInfo')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label="Kurum Adi"
+                label={t('auth.register.institutionName')}
                 type="text"
-                placeholder="Calistiginiz kurum"
+                placeholder={t('auth.register.institutionPlaceholder')}
                 value={formData.institution_name}
                 onChange={(e) => setFormData({ ...formData, institution_name: e.target.value })}
                 disabled={loading}
-                hint="Opsiyonel"
+                hint={t('auth.register.optional')}
               />
 
               <Input
-                label="Kurum E-postasi"
+                label={t('auth.register.institutionEmail')}
                 type="email"
                 placeholder="ad.soyad@kurum.edu.tr"
                 value={formData.institution_email}
                 onChange={(e) => setFormData({ ...formData, institution_email: e.target.value })}
                 disabled={loading}
-                hint="Opsiyonel"
+                hint={t('auth.register.optional')}
               />
             </div>
           </div>
@@ -208,7 +208,7 @@ export default function RegisterPage() {
                 disabled={loading}
               />
               <span className="text-sm text-slate-600 group-hover:text-slate-800 transition-colors">
-                KVKK ve Gizlilik Politikasini okudum ve kabul ediyorum. <span className="text-red-500">*</span>
+                {t('auth.register.kvkkConsent')} <span className="text-red-500">*</span>
               </span>
             </label>
 
@@ -222,7 +222,7 @@ export default function RegisterPage() {
                 disabled={loading}
               />
               <span className="text-sm text-slate-600 group-hover:text-slate-800 transition-colors">
-                Saglik profesyoneli oldugumu beyan ederim. <span className="text-red-500">*</span>
+                {t('auth.register.healthProfessional')} <span className="text-red-500">*</span>
               </span>
             </label>
           </div>
@@ -245,7 +245,7 @@ export default function RegisterPage() {
         {/* Login Link */}
         <div className="mt-8 text-center">
           <p className="text-sm text-slate-500">
-            Zaten hesabiniz var mi?{' '}
+            {t('auth.register.alreadyHaveAccount')}{' '}
             <Link
               href="/auth/login"
               className="font-semibold text-cyan-700 hover:text-cyan-800 transition-colors"
