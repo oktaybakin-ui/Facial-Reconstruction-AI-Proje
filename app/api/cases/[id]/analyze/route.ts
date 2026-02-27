@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabaseClient';
 import { runCaseAnalysis } from '@/lib/ai/orchestrator';
 
-// AI analysis pipeline needs more time (vision + decision + safety)
-export const maxDuration = 120;
+// AI analysis pipeline needs more time (vision + decision + safety + validation)
+export const maxDuration = 300;
 
 export async function POST(
   request: NextRequest,

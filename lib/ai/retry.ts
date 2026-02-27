@@ -13,12 +13,12 @@ export interface RetryConfig {
 }
 
 const DEFAULT_CONFIG: RetryConfig = {
-  maxRetries: 3,
+  maxRetries: 2,
   initialDelayMs: 1000,
-  maxDelayMs: 30000,
+  maxDelayMs: 15000,
   backoffMultiplier: 2,
   retryableStatusCodes: [429, 500, 502, 503, 529],
-  maxTotalTimeMs: 45000, // Vercel serverless timeout güvenliği
+  maxTotalTimeMs: 30000, // Vercel serverless timeout güvenliği
 };
 
 function isRetryableError(error: unknown, retryableStatusCodes: number[]): boolean {

@@ -196,11 +196,16 @@ export default function CaseDetailContent({
 
       console.log('Request body to send:', requestBody);
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 290000); // 290sn timeout (maxDuration=300)
+
       const response = await fetch(`/api/cases/${caseData.id}/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       // Handle non-JSON responses (e.g. 504 timeout from Vercel)
       let data;

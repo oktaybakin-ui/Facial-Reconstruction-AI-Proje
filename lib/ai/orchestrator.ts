@@ -161,35 +161,35 @@ export async function runCaseAnalysis(
     }
   }
   
-    // Step 1.25: Extract anatomical landmarks if not already present
-    if (!visionSummary.anatomical_landmarks && preopPhotoUrl) {
-      try {
-        const landmarks = await extractAnatomicalLandmarks(preopPhotoUrl);
-        if (landmarks) {
-          visionSummary.anatomical_landmarks = landmarks;
-        }
-      } catch (landmarkError: unknown) {
-        console.warn('⚠️ Anatomical landmark extraction failed, continuing without:',
-          landmarkError instanceof Error ? landmarkError.message : String(landmarkError));
-      }
-    }
-
-    // Step 1.5: Get relevant medical sources for this case
-    let medicalSourcesContext = '';
-    try {
-      const relevantSources = await getRelevantSourcesForCase(
+    // Step 1.25 + 1.5: Run landmark extraction AND medical sources lookup in PARALLEL
+    const [landmarkResult, sourcesResult] = await Promise.allSettled([
+      // Landmark extraction
+      (!visionSummary.anatomical_landmarks && preopPhotoUrl)
+        ? extractAnatomicalLandmarks(preopPhotoUrl)
+        : Promise.resolve(undefined),
+      // Medical sources lookup
+      getRelevantSourcesForCase(
         userId,
         caseData.region,
         caseData.critical_structures,
         caseData.critical_structures,
         `${caseData.region} ${caseData.pathology_suspected || ''} ${caseData.depth || ''}`
-      );
-      if (relevantSources.length > 0) {
-        medicalSourcesContext = formatSourcesForPrompt(relevantSources);
-      }
-    } catch (error: unknown) {
-      console.warn('⚠️ Could not fetch medical sources, continuing without them:', error instanceof Error ? error.message : String(error));
-      // Don't fail the whole analysis if sources can't be fetched
+      ),
+    ]);
+
+    // Process landmark result
+    if (landmarkResult.status === 'fulfilled' && landmarkResult.value) {
+      visionSummary.anatomical_landmarks = landmarkResult.value;
+    } else if (landmarkResult.status === 'rejected') {
+      console.warn('⚠️ Anatomical landmark extraction failed, continuing without:', landmarkResult.reason);
+    }
+
+    // Process medical sources result
+    let medicalSourcesContext = '';
+    if (sourcesResult.status === 'fulfilled' && sourcesResult.value.length > 0) {
+      medicalSourcesContext = formatSourcesForPrompt(sourcesResult.value);
+    } else if (sourcesResult.status === 'rejected') {
+      console.warn('⚠️ Could not fetch medical sources, continuing without them:', sourcesResult.reason);
     }
 
     // Step 2: Flap decision suggestions (with medical sources context)

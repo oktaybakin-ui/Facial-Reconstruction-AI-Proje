@@ -48,11 +48,11 @@ Aynı JSON yapısını döndür ama:
     const response = await withRetry(
       () => anthropic.messages.create({
         model: 'claude-sonnet-4-6',
-        max_tokens: 16000,
+        max_tokens: 8000,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: userPrompt }],
       }),
-      { maxRetries: 3, initialDelayMs: 1000 }
+      { maxRetries: 2, initialDelayMs: 1000 }
     );
 
     const rawText = response.content
