@@ -78,8 +78,8 @@ export async function detectFaceLandmarksPython(imageUrl: string): Promise<FaceL
 
     const data = await response.json();
     return data as FaceLandmarksResponse;
-  } catch (error: any) {
-    console.error('Error calling Python service:', error.message);
+  } catch (error: unknown) {
+    console.error('Error calling Python service:', error instanceof Error ? error.message : String(error));
     return null;
   }
 }
@@ -108,8 +108,8 @@ export async function multiViewReconstructionPython(
 
     const data = await response.json();
     return data as MultiViewReconstructionResponse;
-  } catch (error: any) {
-    console.error('Error calling Python service for multi-view reconstruction:', error.message);
+  } catch (error: unknown) {
+    console.error('Error calling Python service for multi-view reconstruction:', error instanceof Error ? error.message : String(error));
     return null;
   }
 }

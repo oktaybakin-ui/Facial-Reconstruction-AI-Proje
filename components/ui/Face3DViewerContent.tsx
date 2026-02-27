@@ -28,8 +28,8 @@ export default function Face3DViewerContent({
     // Dynamically import Three.js
     Promise.all([
       import('three'),
-      import('three/examples/jsm/controls/OrbitControls'),
-      import('three/examples/jsm/loaders/GLTFLoader'),
+      import('three/addons/controls/OrbitControls.js'),
+      import('three/addons/loaders/GLTFLoader.js'),
     ]).then(([THREE, OrbitControlsModule, GLTFLoaderModule]) => {
       const { OrbitControls } = OrbitControlsModule;
       const { GLTFLoader } = GLTFLoaderModule;
@@ -79,7 +79,7 @@ export default function Face3DViewerContent({
 
       loader.load(
         modelUrl,
-        (gltf) => {
+        (gltf: { scene: InstanceType<typeof THREE.Group> }) => {
           const model = gltf.scene;
           
           // Center and scale model
@@ -96,14 +96,14 @@ export default function Face3DViewerContent({
           setLoading(false);
           sceneInitialized.current = true;
         },
-        (progress) => {
+        (progress: { loaded: number; total: number }) => {
           console.log('Loading progress:', (progress.loaded / progress.total) * 100 + '%');
         },
-        (err) => {
+        (err: unknown) => {
           console.error('Error loading 3D model:', err);
           setError('3D model yüklenemedi');
           setLoading(false);
-          onError?.(err.message || 'Model yükleme hatası');
+          onError?.(err instanceof Error ? err.message : 'Model yükleme hatası');
         }
       );
 
@@ -168,7 +168,7 @@ export default function Face3DViewerContent({
     return (
       <div className="w-full h-96 bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl border border-gray-200 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-700 font-medium">3D model URL'i bulunamadı</p>
+          <p className="text-gray-700 font-medium">3D model URL&apos;i bulunamadı</p>
           <p className="text-gray-500 text-sm mt-2">Model henüz oluşturulmamış olabilir</p>
         </div>
       </div>

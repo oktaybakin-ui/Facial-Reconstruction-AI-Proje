@@ -23,10 +23,6 @@ export default function ImageAnnotation({ imageUrl, onAnnotationChange }: ImageA
   const [startPos, setStartPos] = useState<{ x: number; y: number } | null>(null);
   const [imageInfo, setImageInfo] = useState<{ naturalWidth: number; naturalHeight: number; displayedWidth: number; displayedHeight: number } | null>(null);
 
-  useEffect(() => {
-    drawCanvas();
-  }, [imageUrl, annotation]);
-
   const drawCanvas = () => {
     const canvas = canvasRef.current;
     const image = imageRef.current;
@@ -43,12 +39,16 @@ export default function ImageAnnotation({ imageUrl, onAnnotationChange }: ImageA
       ctx.strokeStyle = '#FF0000';
       ctx.lineWidth = 3;
       ctx.strokeRect(annotation.x, annotation.y, annotation.width, annotation.height);
-      
+
       // Fill with semi-transparent red
       ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
       ctx.fillRect(annotation.x, annotation.y, annotation.width, annotation.height);
     }
   };
+
+  useEffect(() => {
+    drawCanvas();
+  }, [imageUrl, annotation]);
 
   const getMousePos = (e: React.MouseEvent) => {
     const canvas = canvasRef.current;

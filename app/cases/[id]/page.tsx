@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import CaseDetailContent from './CaseDetailContent';
+import { getSignedPhotoUrls } from '@/lib/actions/storage';
 import type { Case, CasePhoto } from '@/types/cases';
 import type { AIResult } from '@/types/ai';
 import Link from 'next/link';
@@ -65,7 +66,23 @@ export default function CaseDetailPage() {
         console.error('Photos fetch error:', photosError);
       }
 
-      setPhotos((photosData || []) as CasePhoto[]);
+      // Resolve storage paths/URLs to signed URLs for secure display
+      if (photosData && photosData.length > 0) {
+        try {
+          const urls = photosData.map((p: CasePhoto) => p.url).filter(Boolean);
+          const signedUrls = await getSignedPhotoUrls(urls);
+          const resolvedPhotos = photosData.map((p: CasePhoto) => ({
+            ...p,
+            url: signedUrls[p.url] || p.url,
+          }));
+          setPhotos(resolvedPhotos as CasePhoto[]);
+        } catch (e) {
+          console.error('Signed URL resolution failed, using raw URLs:', e);
+          setPhotos((photosData || []) as CasePhoto[]);
+        }
+      } else {
+        setPhotos([]);
+      }
 
       // Fetch AI result if exists (use maybeSingle to avoid error if no result)
       // Note: RLS policy ensures user can only see AI results for their own cases
@@ -92,9 +109,9 @@ export default function CaseDetailPage() {
       if (aiResultData) {
         setAiResult(aiResultData as AIResult);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error loading case:', err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -125,7 +142,7 @@ export default function CaseDetailPage() {
             href="/dashboard"
             className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
-            Dashboard'a Dön
+            Dashboard&apos;a Dön
           </Link>
         </div>
       </div>
@@ -147,7 +164,7 @@ export default function CaseDetailPage() {
             href="/dashboard"
             className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
-            Dashboard'a Dön
+            Dashboard&apos;a Dön
           </Link>
         </div>
       </div>

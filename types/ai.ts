@@ -1,3 +1,22 @@
+// Anatomik yüz referans noktaları (0-1000 normalize koordinatlar)
+export interface AnatomicalLandmarks {
+  leftEye: { x: number; y: number };
+  rightEye: { x: number; y: number };
+  noseTip: { x: number; y: number };
+  noseBase: { x: number; y: number };
+  leftMouthCorner: { x: number; y: number };
+  rightMouthCorner: { x: number; y: number };
+  chin: { x: number; y: number };
+  foreheadCenter?: { x: number; y: number };
+  leftEyebrow?: { x: number; y: number };
+  rightEyebrow?: { x: number; y: number };
+  nasolabialFoldLeft?: { x: number; y: number };
+  nasolabialFoldRight?: { x: number; y: number };
+  facialMidline: { topX: number; bottomX: number };
+  eyeLine: { y: number };
+  mouthLine: { y: number };
+}
+
 export interface VisionSummary {
   detected_region: string;
   estimated_width_mm: number;
@@ -12,6 +31,7 @@ export interface VisionSummary {
     height: number; // 0-1000 normalized
     points?: Array<{ x: number; y: number }>; // Defect polygon points
   };
+  anatomical_landmarks?: AnatomicalLandmarks;
 }
 
 // Note: This type was removed as it was duplicate - use Case type from cases.ts
@@ -74,37 +94,56 @@ export interface FlapSuggestion {
   evidence_level: EvidenceLevel; // Kanıt seviyesi
   success_rate: string; // Başarı oranı
   surgical_technique?: string; // Cerrahi teknik açıklaması (Türkçe)
-  video_link?: string; // YouTube uygulama videosu linki (opsiyonel)
   flap_drawing?: {
     defect_area?: {
       points: Array<{ x: number; y: number }>;
       color: string;
       label: string;
+      hatching?: 'cross' | 'single' | 'none';
     };
     incision_lines: Array<{
       points: Array<{ x: number; y: number }>;
       color: string;
       label: string;
-      lineStyle: 'dashed' | 'solid';
+      lineStyle: 'dashed' | 'solid' | 'dotted' | 'dash-dot';
       lineWidth?: number;
+      purpose?: 'planned_incision' | 'wound_edge' | 'suture_line';
     }>;
     flap_areas: Array<{
       points: Array<{ x: number; y: number }>;
       color: string;
       label: string;
       fillOpacity?: number;
+      hatching?: 'none' | 'single' | 'cross';
     }>;
     donor_area?: {
       points: Array<{ x: number; y: number }>;
       color: string;
       label: string;
+      hatching?: 'single' | 'none';
     };
     arrows?: Array<{
       from: { x: number; y: number };
       to: { x: number; y: number };
       color: string;
       label?: string;
+      type?: 'straight' | 'curved' | 'transposition';
+      pivotPoint?: { x: number; y: number };
     }>;
+    pivot_point?: {
+      position: { x: number; y: number };
+      label?: string;
+    };
+    burow_triangles?: Array<{
+      points: Array<{ x: number; y: number }>;
+      color: string;
+      label: string;
+    }>;
+    undermining_zone?: {
+      points: Array<{ x: number; y: number }>;
+      color: string;
+      label: string;
+    };
   };
   // Validation results (optional - added after validation)
   validation?: import('./validation').ValidationResult;
@@ -137,5 +176,9 @@ export interface AIResult {
   // 3D Face Model fields (optional for backward compatibility)
   enable_3d?: boolean;
   face_3d?: Face3DModel;
+  // Partial result support (graceful degradation)
+  partial?: boolean;
+  error_stage?: string;
+  error_message?: string;
 }
 

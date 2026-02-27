@@ -71,7 +71,7 @@ export default function AdminPage() {
 
         setIsAdminUser(true);
         await loadUsers();
-      } catch (apiError: any) {
+      } catch (apiError: unknown) {
         // Fallback to client-side check if API fails
         logger.warn('API admin check failed, using fallback:', apiError);
         const fallbackAdminStatus = isAdmin(user.email);
@@ -426,7 +426,7 @@ export default function AdminPage() {
               onClick={() => router.push('/dashboard')}
               className="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-2xl hover:bg-gray-300 transition-colors font-semibold"
             >
-              ← Dashboard'a Dön
+              ← Dashboard&apos;a Dön
             </button>
           </div>
         </div>

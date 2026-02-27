@@ -19,9 +19,10 @@ export async function PUT(
     // Check if user is admin
     try {
       requireAdmin(user_email);
-    } catch (adminError: any) {
-      return NextResponse.json({ 
-        error: adminError.message || 'Bu işlem için yönetici yetkisi gereklidir' 
+    } catch (adminError: unknown) {
+      const adminErrorMessage = adminError instanceof Error ? adminError.message : 'Bu işlem için yönetici yetkisi gereklidir';
+      return NextResponse.json({
+        error: adminErrorMessage
       }, { status: 403 });
     }
 
@@ -43,9 +44,10 @@ export async function PUT(
     }
 
     return NextResponse.json({ source: data }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in PUT /api/medical-sources/[id]:', error);
-    return NextResponse.json({ error: error.message || 'Bilinmeyen hata' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -68,9 +70,10 @@ export async function DELETE(
     // Check if user is admin
     try {
       requireAdmin(userEmail);
-    } catch (adminError: any) {
-      return NextResponse.json({ 
-        error: adminError.message || 'Bu işlem için yönetici yetkisi gereklidir' 
+    } catch (adminError: unknown) {
+      const adminErrorMessage = adminError instanceof Error ? adminError.message : 'Bu işlem için yönetici yetkisi gereklidir';
+      return NextResponse.json({
+        error: adminErrorMessage
       }, { status: 403 });
     }
 
@@ -86,9 +89,10 @@ export async function DELETE(
     }
 
     return NextResponse.json({ message: 'Kaynak silindi' }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in DELETE /api/medical-sources/[id]:', error);
-    return NextResponse.json({ error: error.message || 'Bilinmeyen hata' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 

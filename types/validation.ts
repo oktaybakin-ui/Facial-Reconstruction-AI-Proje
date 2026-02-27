@@ -109,7 +109,10 @@ export interface ValidationResult {
   
   // Landmark verileri
   landmarks: FaceLandmarks | null;
-  
+
+  // Klinik dogrulama raporu
+  clinicalReport?: ClinicalValidationReport;
+
   // Validasyon zamanı
   validatedAt: string;
 }
@@ -138,6 +141,51 @@ export interface AnatomicalOverlay {
   visible: boolean;
   opacity: number; // 0-1
   color: string;
-  data: any; // Overlay'e özel veri
+  data: Record<string, unknown>; // Overlay'e özel veri
+}
+
+/**
+ * Klinik Guvenlik Kontrolu
+ * Trafik isigi sistemi ile risk degerlendirmesi
+ */
+export interface ClinicalSafetyCheck {
+  name: string;
+  status: 'yeşil' | 'sarı' | 'kırmızı';
+  description: string;
+  detail: string;
+}
+
+/**
+ * Simetri Analizi
+ * Yuz orta hattina gore flap simetri degerlendirmesi
+ */
+export interface SymmetryAnalysis {
+  midlineDeviation: number;  // 0-100
+  flapSymmetry: number;      // 0-100
+  description: string;
+}
+
+/**
+ * Doku Uygunlugu Analizi
+ * Donor alan yeterliligi ve defekt kapsama degerlendirmesi
+ */
+export interface TissueAvailability {
+  donorSiteAdequacy: number;  // 0-100
+  estimatedDonorArea: number;
+  requiredDefectArea: number;
+  isAdequate: boolean;
+  concerns: string[];
+}
+
+/**
+ * Klinik Dogrulama Raporu
+ * Tum klinik kontrollerin ozet raporu
+ */
+export interface ClinicalValidationReport {
+  safetyChecks: ClinicalSafetyCheck[];
+  symmetryAnalysis?: SymmetryAnalysis;
+  tissueAvailability?: TissueAvailability;
+  overallRisk: 'düşük' | 'orta' | 'yüksek';
+  recommendations: string[];
 }
 

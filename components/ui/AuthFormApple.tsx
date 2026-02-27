@@ -10,29 +10,46 @@ interface AuthFormAppleProps {
   className?: string;
 }
 
-export function AuthFormApple({ 
-  children, 
-  title, 
+export function AuthFormApple({
+  children,
+  title,
   subtitle,
-  className 
+  className,
 }: AuthFormAppleProps) {
   return (
-    <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center px-6 py-12">
-      <div 
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 sm:px-6 py-12">
+      <div
         className={cn(
-          'bg-white rounded-3xl shadow-[0_4px_16px_rgba(0,0,0,0.06)] border border-black/5 w-full max-w-md p-8 md:p-10',
+          'bg-white rounded-xl shadow-md border border-slate-200 w-full max-w-md p-8 md:p-10',
           className
         )}
       >
+        {/* Brand Mark */}
+        <div className="flex justify-center mb-6">
+          <div className="w-11 h-11 rounded-lg bg-cyan-700 flex items-center justify-center shadow-sm">
+            <svg
+              className="w-6 h-6 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+              />
+            </svg>
+          </div>
+        </div>
+
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-black/90 mb-2 tracking-tight">
+        <div className="mb-8 text-center">
+          <h1 className="text-2xl font-semibold text-slate-900 mb-1.5 tracking-tight">
             {title}
           </h1>
           {subtitle && (
-            <p className="text-base text-black/50">
-              {subtitle}
-            </p>
+            <p className="text-sm text-slate-500">{subtitle}</p>
           )}
         </div>
 
@@ -42,4 +59,3 @@ export function AuthFormApple({
     </div>
   );
 }
-

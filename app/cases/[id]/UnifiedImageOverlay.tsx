@@ -44,73 +44,31 @@ export default function UnifiedImageOverlay({
   
   // Expose imageInfo to parent via callback (for anatomical overlay)
   useEffect(() => {
-    if (imageInfo && (window as any).onImageInfoUpdate) {
-      (window as any).onImageInfoUpdate(imageInfo);
+    if (imageInfo && (window as unknown as Record<string, unknown>).onImageInfoUpdate) {
+      ((window as unknown as Record<string, unknown>).onImageInfoUpdate as (info: typeof imageInfo) => void)(imageInfo);
     }
   }, [imageInfo]);
   const [currentShape, setCurrentShape] = useState<AnnotationShape>(annotationShape);
 
+  // Sync local state with prop changes - intentional pattern
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setCurrentAnnotation(annotation || null);
   }, [annotation]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  useEffect(() => {
-    drawCanvas();
-  }, [imageUrl, currentAnnotation, flapSuggestions, selectedFlapIndex, showAnnotationMode]);
+  const drawPolygon = (ctx: CanvasRenderingContext2D, points: Array<{ x: number; y: number }>, fill: boolean, stroke: boolean) => {
+    if (points.length < 2) return;
 
-  const drawCanvas = () => {
-    const canvas = canvasRef.current;
-    const image = imageRef.current;
-    if (!canvas || !image || !imageInfo) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // If annotation mode, draw annotation based on shape
-    if (showAnnotationMode && currentAnnotation) {
-      ctx.strokeStyle = '#FF0000';
-      ctx.lineWidth = 3;
-      ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
-      
-      const shape = currentAnnotation.shape || currentShape;
-      
-      if (shape === 'circle') {
-        // Draw circle: use center and radius
-        const centerX = currentAnnotation.x + currentAnnotation.width / 2;
-        const centerY = currentAnnotation.y + currentAnnotation.height / 2;
-        const radius = Math.max(
-          Math.abs(currentAnnotation.width) / 2,
-          Math.abs(currentAnnotation.height) / 2
-        );
-        
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.stroke();
-      } else if (shape === 'polygon' && currentAnnotation.points && currentAnnotation.points.length >= 3) {
-        // Draw polygon
-        ctx.beginPath();
-        ctx.moveTo(currentAnnotation.points[0].x, currentAnnotation.points[0].y);
-        for (let i = 1; i < currentAnnotation.points.length; i++) {
-          ctx.lineTo(currentAnnotation.points[i].x, currentAnnotation.points[i].y);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-      } else {
-        // Default: rectangle
-        ctx.strokeRect(currentAnnotation.x, currentAnnotation.y, currentAnnotation.width, currentAnnotation.height);
-        ctx.fillRect(currentAnnotation.x, currentAnnotation.y, currentAnnotation.width, currentAnnotation.height);
-      }
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y);
     }
+    ctx.closePath();
 
-    // If flap drawing mode, draw flaps
-    if (!showAnnotationMode && flapSuggestions.length > 0) {
-      drawFlapDrawings(ctx);
-    }
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
   };
 
   const drawFlapDrawings = (ctx: CanvasRenderingContext2D) => {
@@ -130,7 +88,7 @@ export default function UnifiedImageOverlay({
         y: (point.y / 1000) * displayedHeight,
       };
     };
-    
+
     console.log('🎨 Drawing flaps with coordinate conversion:', {
       normalized: '0-1000 (based on displayed size)',
       canvas: { width: displayedWidth, height: displayedHeight },
@@ -183,13 +141,13 @@ export default function UnifiedImageOverlay({
         drawing.incision_lines.forEach((incision) => {
           ctx.strokeStyle = incision.color;
           ctx.lineWidth = (incision.lineWidth || 3) * lineWidthMultiplier;
-          
+
           if (incision.lineStyle === 'dashed') {
             ctx.setLineDash([8, 5]);
           } else {
             ctx.setLineDash([]);
           }
-          
+
           const points = incision.points.map(toCanvasCoords);
           if (points.length >= 2) {
             ctx.beginPath();
@@ -209,20 +167,20 @@ export default function UnifiedImageOverlay({
           ctx.fillStyle = arrow.color;
           ctx.lineWidth = 2 * lineWidthMultiplier;
           ctx.setLineDash([]);
-          
+
           const from = toCanvasCoords(arrow.from);
           const to = toCanvasCoords(arrow.to);
-          
+
           ctx.beginPath();
           ctx.moveTo(from.x, from.y);
           ctx.lineTo(to.x, to.y);
           ctx.stroke();
-          
+
           // Draw arrowhead
           const angle = Math.atan2(to.y - from.y, to.x - from.x);
           const arrowLength = 15;
           const arrowAngle = Math.PI / 6;
-          
+
           ctx.beginPath();
           ctx.moveTo(to.x, to.y);
           ctx.lineTo(to.x - arrowLength * Math.cos(angle - arrowAngle), to.y - arrowLength * Math.sin(angle - arrowAngle));
@@ -235,19 +193,64 @@ export default function UnifiedImageOverlay({
     });
   };
 
-  const drawPolygon = (ctx: CanvasRenderingContext2D, points: Array<{ x: number; y: number }>, fill: boolean, stroke: boolean) => {
-    if (points.length < 2) return;
-    
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) {
-      ctx.lineTo(points[i].x, points[i].y);
-    }
-    ctx.closePath();
+  const drawCanvas = () => {
+    const canvas = canvasRef.current;
+    const image = imageRef.current;
+    if (!canvas || !image || !imageInfo) return;
 
-    if (fill) ctx.fill();
-    if (stroke) ctx.stroke();
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // If annotation mode, draw annotation based on shape
+    if (showAnnotationMode && currentAnnotation) {
+      ctx.strokeStyle = '#FF0000';
+      ctx.lineWidth = 3;
+      ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
+
+      const shape = currentAnnotation.shape || currentShape;
+
+      if (shape === 'circle') {
+        // Draw circle: use center and radius
+        const centerX = currentAnnotation.x + currentAnnotation.width / 2;
+        const centerY = currentAnnotation.y + currentAnnotation.height / 2;
+        const radius = Math.max(
+          Math.abs(currentAnnotation.width) / 2,
+          Math.abs(currentAnnotation.height) / 2
+        );
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+      } else if (shape === 'polygon' && currentAnnotation.points && currentAnnotation.points.length >= 3) {
+        // Draw polygon
+        ctx.beginPath();
+        ctx.moveTo(currentAnnotation.points[0].x, currentAnnotation.points[0].y);
+        for (let i = 1; i < currentAnnotation.points.length; i++) {
+          ctx.lineTo(currentAnnotation.points[i].x, currentAnnotation.points[i].y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      } else {
+        // Default: rectangle
+        ctx.strokeRect(currentAnnotation.x, currentAnnotation.y, currentAnnotation.width, currentAnnotation.height);
+        ctx.fillRect(currentAnnotation.x, currentAnnotation.y, currentAnnotation.width, currentAnnotation.height);
+      }
+    }
+
+    // If flap drawing mode, draw flaps
+    if (!showAnnotationMode && flapSuggestions.length > 0) {
+      drawFlapDrawings(ctx);
+    }
   };
+
+  useEffect(() => {
+    drawCanvas();
+  }, [imageUrl, currentAnnotation, flapSuggestions, selectedFlapIndex, showAnnotationMode]);
 
   const getMousePos = (e: React.MouseEvent) => {
     const canvas = canvasRef.current;

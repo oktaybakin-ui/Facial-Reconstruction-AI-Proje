@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     // Get all users from auth
     const adminSupabase = createClient(supabaseUrl, supabaseServiceKey);
-    let authUsers: any[] = [];
+    let authUsers: Array<{ id: string; email?: string }> = [];
     try {
       const { data: { users }, error: listError } = await adminSupabase.auth.admin.listUsers();
       if (!listError && users) {

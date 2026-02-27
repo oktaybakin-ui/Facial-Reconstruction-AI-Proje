@@ -98,9 +98,9 @@ export async function requestRegeneration(
       success: true,
       message: 'Yeniden çizim talebi kaydedildi. Analiz sayfasından yeniden çizim isteyebilirsiniz.',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Regeneration request failed:', error);
-    return { success: false, message: error.message || 'Yeniden çizim talebi başarısız' };
+    return { success: false, message: error instanceof Error ? error.message : 'Yeniden çizim talebi başarısız' };
   }
 }
 

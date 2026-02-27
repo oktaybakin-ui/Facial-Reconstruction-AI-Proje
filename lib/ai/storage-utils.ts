@@ -34,14 +34,6 @@ export async function uploadGLBToStorage(
     throw new Error(`Failed to upload GLB to storage: ${uploadError.message}`);
   }
 
-  // Get public URL
-  const { data: urlData } = supabase.storage
-    .from('face-3d-models')
-    .getPublicUrl(filePath);
-
-  if (!urlData?.publicUrl) {
-    throw new Error('Failed to get public URL for uploaded GLB file');
-  }
-
-  return urlData.publicUrl;
+  // Return storage path (not full URL) for security
+  return uploadData.path;
 }

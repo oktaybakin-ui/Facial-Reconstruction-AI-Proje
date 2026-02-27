@@ -5,7 +5,6 @@ import { downloadAndPreprocessImage, detectFaceLandmarks, generateFaceMesh } fro
 import { multiViewReconstructionPython, checkPythonService } from './face3d-python-client';
 import { createGLBFromMesh } from './glb-generator';
 import { uploadGLBToStorage } from './storage-utils';
-import { createServerClient } from '@/lib/supabaseClient';
 
 /**
  * 3D Face Reconstruction Service
@@ -22,24 +21,46 @@ export interface Face3DReconstructionResult {
 }
 
 /**
- * Calculates confidence based on reconstruction quality metrics
+ * Reconstruction source indicates which pipeline produced the landmarks.
+ * Used to differentiate confidence levels.
+ */
+type ReconstructionSource = 'python' | 'vision' | 'ellipsoid';
+
+/**
+ * Calculates confidence based on reconstruction quality metrics and source.
+ *
+ * Confidence tiers:
+ * - 'yüksek': Python MediaPipe service with successful reconstruction
+ * - 'orta':   GPT-4o vision fallback with good landmarks (>20 points)
+ * - 'düşük':  Basic ellipsoid fallback or very few landmarks
  */
 function calculateConfidence(
   landmarksDetected: number,
   totalImages: number,
-  meshQuality: number
+  meshQuality: number,
+  source: ReconstructionSource = 'ellipsoid',
+  bestKeypointCount: number = 0
 ): Face3DConfidence {
-  // Simple confidence calculation
-  const detectionRate = landmarksDetected / totalImages;
-  const averageQuality = (detectionRate + meshQuality) / 2;
-
-  if (averageQuality >= 0.8) {
-    return 'yüksek';
-  } else if (averageQuality >= 0.5) {
+  // Python service + successful reconstruction => high confidence possible
+  if (source === 'python') {
+    const detectionRate = landmarksDetected / totalImages;
+    const averageQuality = (detectionRate + meshQuality) / 2;
+    if (averageQuality >= 0.7) {
+      return 'yüksek';
+    }
     return 'orta';
-  } else {
+  }
+
+  // GPT-4o vision fallback with good landmarks
+  if (source === 'vision') {
+    if (bestKeypointCount > 20 && meshQuality >= 0.5) {
+      return 'orta';
+    }
     return 'düşük';
   }
+
+  // Basic ellipsoid fallback
+  return 'düşük';
 }
 
 /**
@@ -83,39 +104,46 @@ export async function generate3DFaceModel(
   }
 
   try {
-    console.log('Starting 3D face reconstruction...');
-    console.log(`Processing ${imageUrls.length} images`);
-
     // Step 1: Download and preprocess images
-    console.log('Step 1: Downloading and preprocessing images...');
-    const processedImages = await Promise.all(
-      imageUrls.map(async (url, index) => {
-        try {
-          console.log(`Processing image ${index + 1}/${imageUrls.length}...`);
-          return await downloadAndPreprocessImage(url);
-        } catch (error: any) {
-          console.error(`Error processing image ${index + 1}:`, error);
-          throw new Error(`Image ${index + 1} işlenemedi: ${error.message}`);
-        }
+    const settledResults = await Promise.allSettled(
+      imageUrls.map(async (url) => {
+        return await downloadAndPreprocessImage(url);
       })
     );
 
+    // Filter fulfilled results, log failures
+    const processedImages: Awaited<ReturnType<typeof downloadAndPreprocessImage>>[] = [];
+    settledResults.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        processedImages.push(result.value);
+      } else {
+        console.error(`Image ${index + 1} işlenemedi:`, result.reason);
+      }
+    });
+
+    if (processedImages.length < 3) {
+      return {
+        status: 'failed',
+        confidence: 'düşük',
+        model_url: null,
+        error: `Yetersiz görüntü: ${processedImages.length}/${imageUrls.length} başarılı (minimum 3 gerekli)`,
+      };
+    }
+
     // Step 2: Multi-view reconstruction using Python service (if available)
-    console.log('Step 2: Multi-view face reconstruction...');
     let landmarksDetected = 0;
-    const landmarksResults: Array<any> = [];
+    const landmarksResults: Array<import('./face3d-utils').FaceLandmarks> = [];
     let reconstructionQuality = 0.5; // Default quality
-    let usePythonService = false;
+    let reconstructionSource: ReconstructionSource = 'ellipsoid';
 
     // Try to use Python service for multi-view reconstruction
     try {
       const pythonServiceAvailable = await checkPythonService();
       if (pythonServiceAvailable) {
-        console.log('Python service available, using multi-view reconstruction...');
-        usePythonService = true;
-        
         const multiViewResult = await multiViewReconstructionPython(imageUrls);
         if (multiViewResult && multiViewResult.landmarks_list.length > 0) {
+          reconstructionSource = 'python';
+
           // Convert Python service response to our format
           for (const landmarksResp of multiViewResult.landmarks_list) {
             landmarksResults.push({
@@ -130,40 +158,43 @@ export async function generate3DFaceModel(
               pose_angles: landmarksResp.pose_angles,
             });
           }
-          
+
           landmarksDetected = multiViewResult.landmarks_list.length;
           reconstructionQuality = multiViewResult.reconstruction_quality;
-          
+
           if (multiViewResult.warnings.length > 0) {
             console.warn('Multi-view reconstruction warnings:', multiViewResult.warnings);
           }
         }
-      } else {
-        console.log('Python service not available, using fallback detection...');
       }
-    } catch (error: any) {
-      console.warn('Python service error, falling back to basic detection:', error.message);
+    } catch (error: unknown) {
+      console.warn('Python service error, falling back to individual detection:', error instanceof Error ? error.message : error);
     }
 
-    // Fallback: Detect face landmarks individually if Python service not used
-    if (!usePythonService || landmarksResults.length === 0) {
-      console.log('Step 2 (fallback): Detecting face landmarks individually...');
+    // Fallback: Detect face landmarks individually if Python service did not produce results.
+    // detectFaceLandmarks internally tries Python first, then GPT-4o vision fallback.
+    if (reconstructionSource === 'ellipsoid' || landmarksResults.length === 0) {
       for (let i = 0; i < processedImages.length; i++) {
         try {
           const landmarks = await detectFaceLandmarks(processedImages[i], imageUrls[i]);
           if (landmarks) {
             landmarksDetected++;
             landmarksResults.push(landmarks);
+            // If any landmark detection succeeded via the individual path,
+            // it's either Python single-image or GPT-4o vision.
+            // We mark as 'vision' since multi-view Python already failed above.
+            if (reconstructionSource === 'ellipsoid') {
+              reconstructionSource = 'vision';
+            }
           }
-        } catch (error: any) {
-          console.warn(`Face detection failed for image ${i + 1}:`, error.message);
+        } catch (error: unknown) {
+          console.warn(`Face detection failed for image ${i + 1}:`, error instanceof Error ? error.message : error);
           // Continue with other images
         }
       }
     }
 
     // Step 3: Generate 3D mesh
-    console.log('Step 3: Generating 3D mesh...');
     let mesh;
     
     if (landmarksResults.length > 0) {
@@ -172,12 +203,10 @@ export async function generate3DFaceModel(
       mesh = generateFaceMesh(landmarksResults);
     } else {
       // Fallback: Generate a basic face-shaped mesh
-      console.log('No landmarks detected, using basic face mesh generation...');
       mesh = generateFaceMesh([]);
     }
 
     // Step 4: Export to GLB format
-    console.log('Step 4: Exporting to GLB format...');
     const glbBuffer = await createGLBFromMesh(mesh, {
       name: 'Face 3D Model',
       author: 'Facial Reconstruction AI',
@@ -193,37 +222,40 @@ export async function generate3DFaceModel(
     }
 
     // Step 6: Upload to Supabase Storage
-    console.log('Step 5: Uploading to storage...');
     const modelUrl = await uploadGLBToStorage(glbBuffer, finalCaseId);
 
     // Step 7: Calculate confidence
     // Use reconstruction quality from Python service if available, otherwise estimate
-    const meshQuality = usePythonService && reconstructionQuality > 0 
-      ? reconstructionQuality 
+    const meshQuality = reconstructionSource === 'python' && reconstructionQuality > 0
+      ? reconstructionQuality
       : (landmarksResults.length > 0 ? 0.7 : 0.4);
-    
+
+    // Find the best keypoint count across all landmark sets (for vision quality assessment)
+    const bestKeypointCount = landmarksResults.reduce(
+      (max, lr) => Math.max(max, lr.keypoints.length),
+      0
+    );
+
     const confidence = calculateConfidence(
       landmarksDetected,
       imageUrls.length,
-      meshQuality
+      meshQuality,
+      reconstructionSource,
+      bestKeypointCount
     );
-
-    console.log('✅ 3D face reconstruction completed successfully');
-    console.log(`Model URL: ${modelUrl}`);
-    console.log(`Confidence: ${confidence}`);
 
     return {
       status: 'completed',
       confidence,
       model_url: modelUrl,
     };
-  } catch (error: any) {
-    console.error('❌ 3D face reconstruction failed:', error);
+  } catch (error: unknown) {
+    console.error('3D face reconstruction failed:', error);
     return {
       status: 'failed',
       confidence: 'düşük',
       model_url: null,
-      error: error.message || '3D model oluşturma sırasında bilinmeyen bir hata oluştu.',
+      error: error instanceof Error ? error.message : '3D model oluşturma sırasında bilinmeyen bir hata oluştu.',
     };
   }
 }

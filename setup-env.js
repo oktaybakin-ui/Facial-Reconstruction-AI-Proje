@@ -48,7 +48,7 @@ if (fs.existsSync(envSourceFile)) {
   
   let allKeysPresent = true;
   requiredKeys.forEach(key => {
-    if (envContent.includes(`${key}=`) && !envContent.match(new RegExp(`${key}=\\s*$`))) {
+    if (envContent.includes(`${key}=`) && !envContent.match(new RegExp(`^${key}=\\s*$`, 'm'))) {
       console.log(`  ✓ ${key} ayarlandı`);
     } else {
       console.log(`  ⚠️  ${key} bulunamadı veya boş!`);

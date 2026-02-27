@@ -116,9 +116,9 @@ export default function VectorExportButton({
       downloadSVG(svg, filename);
 
       setExporting(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Export failed:', err);
-      setError(err.message || 'SVG export başarısız');
+      setError(err instanceof Error ? err.message : 'SVG export başarısız');
       setExporting(false);
     }
   };

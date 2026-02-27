@@ -12,23 +12,11 @@ export async function POST(
     const { id } = await params;
     caseId = id;
     
-    console.log('AI Analyze endpoint called for case:', caseId);
-    console.log('Raw params:', params);
-    console.log('Resolved caseId:', caseId);
-    
     const body = await request.json();
     const userId = body.user_id;
     const manualAnnotation = body.manual_annotation || null;
     const enable3D = body.enable_3d === true; // Explicitly check for true
     const faceImages3D = body.face_images_3d || null; // Array of 9 image URLs
-
-    console.log('Request body:', body);
-    console.log('Extracted userId:', userId);
-    console.log('Manual annotation received:', manualAnnotation);
-    console.log('Manual annotation exists:', !!manualAnnotation);
-    console.log('3D mode enabled:', enable3D);
-    console.log('3D images count:', faceImages3D?.length || 0);
-    console.log('Type of userId:', typeof userId);
 
     // Validate 3D mode requirements
     if (enable3D) {
@@ -49,15 +37,10 @@ export async function POST(
     }
 
     if (!caseId || caseId === 'undefined' || caseId === 'null' || caseId.trim() === '') {
-      console.error('No caseId in params or invalid:', caseId);
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Case ID bulunamadı',
-        details: `Received caseId: ${caseId} (type: ${typeof caseId})`
       }, { status: 400 });
     }
-
-    console.log('User ID:', userId);
-    console.log('Case ID:', caseId);
 
     // Run AI analysis (it will verify case ownership internally)
     const result = await runCaseAnalysis(
@@ -72,29 +55,28 @@ export async function POST(
       { result, message: 'AI analizi tamamlandı' },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Analyze error:', error);
-    console.error('Error stack:', error.stack);
-    console.error('Case ID used:', caseId);
-    
+
     // More specific error messages
-    let errorMessage = error.message || 'AI analizi başarısız';
+    const rawMessage = error instanceof Error ? error.message : String(error);
+    let errorMessage = rawMessage || 'AI analizi başarısız';
     let hint = undefined;
-    
+
     // Check for OpenAI API key errors
-    if (error.message?.includes('OpenAI API key') || error.message?.includes('Incorrect API key') || error.message?.includes('401')) {
+    if (rawMessage?.includes('OpenAI API key') || rawMessage?.includes('Incorrect API key') || rawMessage?.includes('401')) {
       errorMessage = 'OpenAI API key geçersiz veya eksik. Lütfen Vercel Dashboard\'da OPENAI_API_KEY environment variable\'ını kontrol edin.';
       hint = 'API key\'inizi https://platform.openai.com/account/api-keys adresinden alabilirsiniz.';
-    } else if (error.message?.includes('quota') || error.message?.includes('rate limit') || error.message?.includes('429')) {
+    } else if (rawMessage?.includes('quota') || rawMessage?.includes('rate limit') || rawMessage?.includes('429')) {
       errorMessage = 'OpenAI API quota/rate limit aşıldı.';
       hint = 'Lütfen https://platform.openai.com/account/billing adresinden quota durumunuzu kontrol edin.';
-    } else if (error.message?.includes('Olgu bulunamadı') || error.message?.includes('Case not found') || error.message?.includes('not found')) {
+    } else if (rawMessage?.includes('Olgu bulunamadı') || rawMessage?.includes('Case not found') || rawMessage?.includes('not found')) {
       errorMessage = 'Olgu bulunamadı. Lütfen sayfayı yenileyip tekrar deneyin.';
       hint = caseId ? `Aranan Case ID: ${caseId}` : 'Case ID bulunamadı';
-    } else if (error.message?.includes('photo') || error.message?.includes('Pre-op')) {
+    } else if (rawMessage?.includes('photo') || rawMessage?.includes('Pre-op')) {
       errorMessage = 'Pre-op fotoğraf bulunamadı. Lütfen önce pre-op fotoğraf yükleyin.';
       hint = 'Fotoğraf yüklemek için yeni olgu ekleme sayfasında fotoğraf seçin.';
-    } else if (error.message?.includes('Access denied') || error.message?.includes('erişim yetkiniz')) {
+    } else if (rawMessage?.includes('Access denied') || rawMessage?.includes('erişim yetkiniz')) {
       errorMessage = 'Bu olguya erişim yetkiniz yok.';
       hint = caseId ? `Case ID: ${caseId}` : undefined;
     }
@@ -102,7 +84,7 @@ export async function POST(
     return NextResponse.json(
       { 
         error: errorMessage,
-        details: error.message,
+        details: rawMessage,
         hint: hint,
         caseId: caseId
       },

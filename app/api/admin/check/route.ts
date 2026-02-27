@@ -31,9 +31,10 @@ export async function GET(request: NextRequest) {
       // Only return admin emails count in development for debugging
       ...(process.env.NODE_ENV === 'development' && { adminEmailsCount: adminEmails.length })
     }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error checking admin status:', error);
-    return NextResponse.json({ error: error.message || 'Bilinmeyen hata' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 

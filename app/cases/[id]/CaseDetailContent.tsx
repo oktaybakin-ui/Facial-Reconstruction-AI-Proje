@@ -182,7 +182,7 @@ export default function CaseDetailContent({
         }
       }
 
-      const requestBody: any = { 
+      const requestBody: Record<string, unknown> = {
         user_id: userId,
         manual_annotation: normalizedAnnotation,
       };
@@ -216,9 +216,9 @@ export default function CaseDetailContent({
       // Wait a moment then refresh
       await new Promise(resolve => setTimeout(resolve, 500));
       router.refresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('AI Analysis failed:', err);
-      setError(err.message || 'Analiz sırasında hata oluştu. Konsolu kontrol edin (F12).');
+      setError(err instanceof Error ? err.message : 'Analiz sırasında hata oluştu. Konsolu kontrol edin (F12).');
     } finally {
       setAnalyzing(false);
     }
@@ -250,9 +250,8 @@ export default function CaseDetailContent({
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from('case-photos')
-        .getPublicUrl(uploadData.path);
+      // Store storage path (not full URL) for security
+      const storagePath = uploadData.path;
 
       // Insert photo record
       const { error: insertError } = await supabase
@@ -260,14 +259,14 @@ export default function CaseDetailContent({
         .insert({
           case_id: caseData.id,
           type: 'postop',
-          url: urlData.publicUrl,
+          url: storagePath,
         });
 
       if (insertError) throw insertError;
 
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || 'Fotoğraf yükleme hatası');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Fotoğraf yükleme hatası');
     } finally {
       setUploadingPostop(false);
     }
@@ -323,9 +322,9 @@ export default function CaseDetailContent({
 
           success('Olgu başarıyla silindi');
           router.push('/dashboard');
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error('Error deleting case:', err);
-          showError(err.message || 'Olgu silinirken bir hata oluştu');
+          showError(err instanceof Error ? err.message : 'Olgu silinirken bir hata oluştu');
         }
       },
     });
@@ -344,7 +343,7 @@ export default function CaseDetailContent({
               href="/dashboard"
               className="btn-secondary text-sm"
             >
-              ← Dashboard'a Dön
+              ← Dashboard&apos;a Dön
             </Link>
           </div>
         </div>
@@ -478,7 +477,7 @@ export default function CaseDetailContent({
                         <div>
                           <strong className="text-amber-900 block mb-1">Önemli:</strong>
                           <p className="text-sm text-amber-800 mb-2">AI analizi çalıştırmadan önce lezyon bölgesini işaretlemelisiniz!</p>
-                          <p className="text-xs text-amber-700">"Lezyonu İşaretle" butonuna tıklayın ve fotoğraf üzerinde lezyon alanını çizin.</p>
+                          <p className="text-xs text-amber-700">&quot;Lezyonu İşaretle&quot; butonuna tıklayın ve fotoğraf üzerinde lezyon alanını çizin.</p>
                         </div>
                       </div>
                     </div>
@@ -569,7 +568,7 @@ export default function CaseDetailContent({
                     <strong>Çözüm Önerileri:</strong>
                     <ul className="list-disc list-inside mt-2 space-y-1">
                       <li>OpenAI hesabınızda kredi/quota kontrolü yapın: <a href="https://platform.openai.com/account/billing" target="_blank" rel="noopener noreferrer" className="underline">Billing Dashboard</a></li>
-                      <li>API key'inizin aktif olduğundan emin olun</li>
+                      <li>API key&apos;inizin aktif olduğundan emin olun</li>
                       <li>Gerekirse yeni bir API key oluşturun</li>
                       <li>Ödeme yöntemi ekleyin veya quota limitinizi artırın</li>
                     </ul>
@@ -1071,24 +1070,6 @@ export default function CaseDetailContent({
                         </div>
                       </div>
 
-                      {flap.video_link && (
-                        <div className="mt-4 pt-5 border-t-2 border-gray-200">
-                          <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                            <span className="text-xl">🎥</span> Uygulama Videosu
-                          </h4>
-                          <a
-                            href={flap.video_link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-105"
-                          >
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                            </svg>
-                            YouTube'da İzle
-                          </a>
-                        </div>
-                      )}
                     </div>
                   </div>
                 ))}

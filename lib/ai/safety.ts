@@ -1,35 +1,28 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { getAnthropicClient } from '@/lib/anthropic';
+import { withRetry } from './retry';
+import { extractJson } from './json-repair';
 import type { FlapSuggestion, SafetyReview, VisionSummary } from '@/types/ai';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const SYSTEM_PROMPT = `Sen tıbbi karar destek JSON çıktısı için güvenlik ve tutarlılık denetçisisin.
 
-const SYSTEM_PROMPT = `You are a safety and consistency checker for medical decision support JSON.
+Görevlerin:
+1. Cerrahi teknikleri güvenlik açısından incele - standart tıbbi pratiğe uygun olduklarından emin ol.
+2. Tehlikeli tavsiyeler, uygunsuz teknikler veya aşırı spekülatif iddiaları işaretle.
+3. surgical_technique alanını KALDIRMA - sadece güvenlik endişelerini comments'te belirt.
+4. Tutarsızlıklar veya belirgin halüsinasyonlar görürsen suitability_score'u düşür ve comments'e not ekle.
+5. safety_review objesi oluştur: hallucination_risk, comments, legal_disclaimer alanlarıyla.
+6. legal_disclaimer şunu belirtmeli: "Bu öneriler yalnızca karar destek amaçlıdır; nihai karar, hastayı değerlendiren klinik ekibe aittir."
 
-Tasks:
-1. Review surgical techniques for safety - ensure they are appropriate and follow standard medical practice.
-2. Flag any dangerous advice, inappropriate techniques, or highly speculative claims.
-3. DO NOT remove surgical techniques - they are requested by the user. Only flag safety concerns in comments.
-4. If you see inconsistencies or obvious hallucinations, lower suitability_score and add notes in comments.
-5. Ensure a safety_review object with fields: hallucination_risk, comments, legal_disclaimer.
-6. The legal disclaimer must state: 'This is for decision support only and does not replace clinical judgment or training.'
+Aynı JSON yapısını döndür + safety_review alanı ekle.
 
-Output the same JSON structure plus an added safety_review field.
-
-DO NOT remove surgical_technique field - only review it for safety concerns and add comments if needed.`;
+ÖNEMLİ: Cerrahi teknik açıklamalarını ASLA silme veya değiştirme. Sadece güvenlik endişelerini raporla.
+TÜM comments Türkçe olmalı.`;
 
 export async function reviewSafety(
   visionSummary: VisionSummary,
   flapSuggestions: FlapSuggestion[]
 ): Promise<SafetyReview & { flapSuggestions: FlapSuggestion[] }> {
-  // Check API key
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error('Anthropic API key bulunamadı. Lütfen .env.local dosyasında ANTHROPIC_API_KEY değişkenini ayarlayın.');
-  }
-
-  console.log('Starting safety review...');
-  console.log('Anthropic API key present:', !!process.env.ANTHROPIC_API_KEY);
+  const anthropic = getAnthropicClient();
 
   try {
     const inputData = {
@@ -37,46 +30,39 @@ export async function reviewSafety(
       flap_suggestions: flapSuggestions,
     };
 
-    const userPrompt = `Review this medical decision support JSON for safety, consistency, and appropriateness:
+    const userPrompt = `Bu tıbbi karar destek JSON'ını güvenlik, tutarlılık ve uygunluk açısından incele:
 
 ${JSON.stringify(inputData, null, 2)}
 
-Check for:
-- Any step-by-step surgical instructions (remove or flag)
-- Dangerous advice or speculative claims
-- Inconsistencies or hallucinations
-- Appropriate disclaimers
+Kontrol et:
+- Tehlikeli tavsiyeler veya spekülatif iddialar
+- Tutarsızlıklar veya halüsinasyonlar
+- Cerrahi tekniklerin güvenliği (silme, sadece incele ve raporla)
+- Uygun yasal uyarılar
 
-Return the same JSON structure but:
-1. Add a safety_review object at the root level
-2. Adjust suitability_scores if you find issues
-3. Add comments in the safety_review if concerns exist`;
+Aynı JSON yapısını döndür ama:
+1. Kök seviyede safety_review objesi ekle
+2. Sorun bulursan suitability_score'ları düzelt
+3. Endişeler varsa safety_review.comments'e ekle`;
 
-    const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 4000,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: userPrompt,
-        },
-      ],
-    });
+    const response = await withRetry(
+      () => anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 8000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+      { maxRetries: 3, initialDelayMs: 1000 }
+    );
 
     const content = response.content[0];
     if (content.type !== 'text') {
-      throw new Error('Unexpected response type from Claude');
+      throw new Error('Beklenmeyen yanıt tipi');
     }
 
-    const text = content.text;
-    // Extract JSON from response (handle markdown code blocks)
-    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, text];
-    const jsonText = jsonMatch[1] || text;
-    
-    const parsed = JSON.parse(jsonText);
-    
-    // Extract safety review and validated suggestions
+    const cleanJson = extractJson(content.text);
+    const parsed = JSON.parse(cleanJson);
+
     const safetyReview: SafetyReview = parsed.safety_review || {
       hallucination_risk: 'orta' as const,
       comments: ['Güvenlik incelemesi tamamlandı'],
@@ -89,15 +75,8 @@ Return the same JSON structure but:
       ...safetyReview,
       flapSuggestions: validatedSuggestions,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Safety review error:', error);
-    console.error('Error details:', {
-      message: error?.message,
-      stack: error?.stack,
-      response: error?.response,
-    });
-    // Re-throw error instead of returning fallback so orchestrator can handle it properly
-    throw new Error(`Güvenlik incelemesi başarısız: ${error?.message || 'Bilinmeyen hata'}`);
+    throw new Error(`Güvenlik incelemesi başarısız: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
   }
 }
-

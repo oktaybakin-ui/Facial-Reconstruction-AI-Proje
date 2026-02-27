@@ -20,6 +20,7 @@ export default function MultiPhotoUpload({
 }: MultiPhotoUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [uploadProgress, setUploadProgress] = useState<{ [key: number]: number }>({});
   const [errors, setErrors] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -49,9 +50,12 @@ export default function MultiPhotoUpload({
     // Upload each file
     Array.from(files).forEach((file, index) => {
       const uploadPromise = uploadPhoto(file, index, caseId)
-        .then((url) => {
-          uploadedUrls.push(url);
-          setUploadedPhotos((prev) => [...prev, url]);
+        .then((path) => {
+          uploadedUrls.push(path);
+          setUploadedPhotos((prev) => [...prev, path]);
+          // Create local blob URL for preview display
+          const blobUrl = URL.createObjectURL(file);
+          setPreviewUrls((prev) => [...prev, blobUrl]);
         })
         .catch((error) => {
           console.error(`Photo ${index + 1} upload failed:`, error);
@@ -104,21 +108,17 @@ export default function MultiPhotoUpload({
       throw new Error(uploadError.message);
     }
 
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('case-photos')
-      .getPublicUrl(filePath);
-
-    if (!urlData?.publicUrl) {
-      throw new Error('Fotoğraf URL\'si alınamadı');
-    }
-
-    return urlData.publicUrl;
+    // Return storage path (not full URL) for security
+    return uploadData.path;
   };
 
   const handleRemovePhoto = (index: number) => {
+    // Revoke blob URL to free memory
+    if (previewUrls[index]) URL.revokeObjectURL(previewUrls[index]);
     const newPhotos = uploadedPhotos.filter((_, i) => i !== index);
+    const newPreviews = previewUrls.filter((_, i) => i !== index);
     setUploadedPhotos(newPhotos);
+    setPreviewUrls(newPreviews);
     onUploadComplete(newPhotos);
   };
 
@@ -195,10 +195,10 @@ export default function MultiPhotoUpload({
             )}
           </div>
           <div className="grid grid-cols-3 gap-4">
-            {uploadedPhotos.map((url, index) => (
+            {uploadedPhotos.map((_path, index) => (
               <div key={index} className="relative group">
                 <img
-                  src={url}
+                  src={previewUrls[index] || ''}
                   alt={`Fotoğraf ${index + 1}`}
                   className="w-full h-32 object-cover rounded-lg border border-gray-200"
                 />

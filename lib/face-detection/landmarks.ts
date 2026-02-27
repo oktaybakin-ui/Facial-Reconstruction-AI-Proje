@@ -43,7 +43,7 @@ export async function loadLandmarkModel(): Promise<faceLandmarksDetection.FaceLa
     );
     console.log('✅ Face landmarks model loaded');
     return model;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to load face landmarks model:', error);
     isModelLoading = false;
     throw error;
@@ -71,7 +71,7 @@ export async function detectLandmarks(
     }
 
     return faces;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Landmark detection failed:', error);
     return null;
   }

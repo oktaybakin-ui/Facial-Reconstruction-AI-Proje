@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Upload institution card to storage if provided
-    let institutionCardUrl: string | null = null;
+    const institutionCardUrl: string | null = null;
     if (body.institution_card_file) {
       // Note: In a real implementation, you'd handle file upload here
       // For now, we assume the file URL is provided or handled client-side
@@ -45,7 +45,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user profile
-    console.log('Creating user profile for:', authData.user.id, authData.user.email);
     const { data: profileData, error: profileError } = await supabase
       .from('user_profiles')
       .insert({
@@ -72,8 +71,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('User profile created successfully:', profileData);
-
     return NextResponse.json(
       {
         message: 'Kayıt başarılı. Hesabınız doğrulama bekliyor.',
@@ -81,10 +78,11 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Registration error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: 'Sunucu hatası', details: error.message },
+      { error: 'Sunucu hatası', details: errorMessage },
       { status: 500 }
     );
   }

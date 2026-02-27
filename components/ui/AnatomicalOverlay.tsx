@@ -28,46 +28,6 @@ export default function AnatomicalOverlay({
 }: AnatomicalOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  useEffect(() => {
-    if (!visible || !canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Set canvas size
-    canvas.width = displayedWidth;
-    canvas.height = displayedHeight;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.globalAlpha = opacity;
-
-    // Scale factor
-    const scaleX = displayedWidth / imageWidth;
-    const scaleY = displayedHeight / imageHeight;
-
-    const scale = (value: number, dimension: 'x' | 'y') => {
-      return dimension === 'x' ? value * scaleX : value * scaleY;
-    };
-
-    // Draw based on overlay type
-    switch (overlayType) {
-      case 'guide-lines':
-        drawGuideLines(ctx, scale);
-        break;
-      case 'golden-ratio':
-        drawGoldenRatio(ctx, scale);
-        break;
-      case 'muscle-map':
-        drawMuscleMap(ctx, scale);
-        break;
-      case 'bone-map':
-        drawBoneMap(ctx, scale);
-        break;
-    }
-  }, [visible, opacity, overlayType, displayedWidth, displayedHeight, imageWidth, imageHeight]);
-
   const drawGuideLines = (
     ctx: CanvasRenderingContext2D,
     scale: (value: number, dimension: 'x' | 'y') => number
@@ -187,11 +147,11 @@ export default function AnatomicalOverlay({
     // Simplified bone structure
     // Orbital rim
     ctx.beginPath();
-    ctx.ellipse(scale(imageWidth * 0.35, 'x'), scale(imageHeight * 0.3, 'y'), 
+    ctx.ellipse(scale(imageWidth * 0.35, 'x'), scale(imageHeight * 0.3, 'y'),
       scale(imageWidth * 0.1, 'x'), scale(imageHeight * 0.08, 'y'), 0, 0, Math.PI * 2);
     ctx.stroke();
     ctx.beginPath();
-    ctx.ellipse(scale(imageWidth * 0.65, 'x'), scale(imageHeight * 0.3, 'y'), 
+    ctx.ellipse(scale(imageWidth * 0.65, 'x'), scale(imageHeight * 0.3, 'y'),
       scale(imageWidth * 0.1, 'x'), scale(imageHeight * 0.08, 'y'), 0, 0, Math.PI * 2);
     ctx.stroke();
 
@@ -207,6 +167,46 @@ export default function AnatomicalOverlay({
     ctx.lineTo(scale(imageWidth * 0.75, 'x'), scale(imageHeight * 0.4, 'y'));
     ctx.stroke();
   };
+
+  useEffect(() => {
+    if (!visible || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Set canvas size
+    canvas.width = displayedWidth;
+    canvas.height = displayedHeight;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = opacity;
+
+    // Scale factor
+    const scaleX = displayedWidth / imageWidth;
+    const scaleY = displayedHeight / imageHeight;
+
+    const scale = (value: number, dimension: 'x' | 'y') => {
+      return dimension === 'x' ? value * scaleX : value * scaleY;
+    };
+
+    // Draw based on overlay type
+    switch (overlayType) {
+      case 'guide-lines':
+        drawGuideLines(ctx, scale);
+        break;
+      case 'golden-ratio':
+        drawGoldenRatio(ctx, scale);
+        break;
+      case 'muscle-map':
+        drawMuscleMap(ctx, scale);
+        break;
+      case 'bone-map':
+        drawBoneMap(ctx, scale);
+        break;
+    }
+  }, [visible, opacity, overlayType, displayedWidth, displayedHeight, imageWidth, imageHeight]);
 
   if (!visible) return null;
 

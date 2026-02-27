@@ -24,11 +24,12 @@ export async function GET() {
     let client;
     try {
       client = getOpenAIClient();
-    } catch (clientError: any) {
+    } catch (clientError: unknown) {
+      const clientErrorMessage = clientError instanceof Error ? clientError.message : String(clientError);
       return NextResponse.json({
         success: false,
         error: 'Failed to create OpenAI client',
-        details: clientError.message,
+        details: clientErrorMessage,
         keyInfo,
       }, { status: 500 });
     }
@@ -52,22 +53,23 @@ export async function GET() {
           model: apiTest.model,
         },
       });
-    } catch (apiError: any) {
+    } catch (apiError: unknown) {
       // Parse error details
+      const apiErr = apiError as Record<string, unknown>;
       const errorDetails = {
-        message: apiError.message,
-        status: apiError.status,
-        code: apiError.code,
-        type: apiError.type,
+        message: apiErr.message ?? String(apiError),
+        status: apiErr.status,
+        code: apiErr.code,
+        type: apiErr.type,
       };
 
       // Check for specific error types
       let errorType = 'unknown';
-      if (apiError.status === 401) {
+      if (apiErr.status === 401) {
         errorType = 'invalid_key';
-      } else if (apiError.status === 429) {
+      } else if (apiErr.status === 429) {
         errorType = 'rate_limit';
-      } else if (apiError.status === 500) {
+      } else if (apiErr.status === 500) {
         errorType = 'server_error';
       }
 
@@ -97,12 +99,14 @@ export async function GET() {
         }[errorType] || ['Check error details above'],
       }, { status: 500 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
     return NextResponse.json({
       success: false,
       error: 'Unexpected error',
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      details: errorMessage,
+      stack: process.env.NODE_ENV === 'development' ? errorStack : undefined,
     }, { status: 500 });
   }
 }

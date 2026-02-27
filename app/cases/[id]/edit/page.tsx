@@ -91,9 +91,9 @@ export default function EditCasePage() {
         pathology_result_date: caseItem.pathology_result_date || '',
         pathology_result: caseItem.pathology_result || '',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading case:', error);
-      alert(`Hata: ${error.message}`);
+      alert(`Hata: ${error instanceof Error ? error.message : String(error)}`);
       router.push('/dashboard');
     } finally {
       setLoading(false);
@@ -132,9 +132,9 @@ export default function EditCasePage() {
 
       alert('Olgu başarıyla güncellendi!');
       router.push(`/cases/${caseId}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating case:', error);
-      alert(`Hata: ${error.message}`);
+      alert(`Hata: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setSaving(false);
     }
@@ -284,7 +284,7 @@ export default function EditCasePage() {
               </label>
               <select
                 value={formData.depth || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, depth: e.target.value as any }))}
+                onChange={(e) => setFormData(prev => ({ ...prev, depth: e.target.value as 'skin' | 'skin+subcutis' | 'muscle' | 'mucosa' | undefined }))}
                 className="w-full px-4 py-2.5 bg-white/80 backdrop-blur-sm border border-black/10 rounded-xl text-black/80 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 <option value="">Seçiniz</option>

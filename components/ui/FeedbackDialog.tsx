@@ -67,8 +67,8 @@ export default function FeedbackDialog({
       } else {
         setError(result.message);
       }
-    } catch (err: any) {
-      setError(err.message || 'Geri bildirim gönderilemedi');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Geri bildirim gönderilemedi');
     } finally {
       setSubmitting(false);
     }

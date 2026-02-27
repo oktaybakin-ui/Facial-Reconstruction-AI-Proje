@@ -1,5 +1,3 @@
-'use server';
-
 import type { FlapSuggestion, VisionSummary } from '@/types/ai';
 import type { ValidationResult } from '@/types/validation';
 
@@ -14,7 +12,7 @@ export interface CorrectionSuggestion {
   description: string;
   suggestedChange: {
     action: string;
-    details: any;
+    details: Record<string, unknown>;
   };
   confidence: number; // 0-100
 }
@@ -137,7 +135,7 @@ export function applyCorrections(
   for (const suggestion of applicableSuggestions) {
     if (suggestion.type === 'coverage' && corrected.flap_drawing) {
       // Increase flap size
-      const sizeMultiplier = suggestion.suggestedChange.details.recommendedSizeIncrease || 1.2;
+      const sizeMultiplier = (suggestion.suggestedChange.details.recommendedSizeIncrease as number) || 1.2;
       
       if (corrected.flap_drawing.flap_areas) {
         corrected.flap_drawing.flap_areas = corrected.flap_drawing.flap_areas.map(area => ({
@@ -152,7 +150,7 @@ export function applyCorrections(
 
     if (suggestion.type === 'position' && corrected.flap_drawing) {
       // Adjust position
-      const adjustment = suggestion.suggestedChange.details.recommendedAdjustment || 0;
+      const adjustment = (suggestion.suggestedChange.details.recommendedAdjustment as number) || 0;
       
       if (corrected.flap_drawing.flap_areas) {
         corrected.flap_drawing.flap_areas = corrected.flap_drawing.flap_areas.map(area => ({

@@ -1,12 +1,14 @@
 'use server';
 
 import { createServerClient } from '@/lib/supabaseClient';
-import { analyzeVision } from './vision';
+import { analyzeVision, extractAnatomicalLandmarks } from './vision';
 import { suggestFlaps } from './decision';
 import { reviewSafety } from './safety';
 import { generate3DFaceModel } from './face3d';
 import { validateFlapDrawing } from './validation';
+import { generateCorrectionSuggestions, applyCorrections } from './postprocessing';
 import { getRelevantSourcesForCase, formatSourcesForPrompt } from '@/lib/medical/sources';
+import { resolveStorageUrl } from '@/lib/actions/storage';
 import type { AIResult, VisionSummary, FlapSuggestion, SafetyReview, Face3DModel } from '@/types/ai';
 import type { Case } from '@/types/cases';
 
@@ -36,22 +38,13 @@ export async function runCaseAnalysis(
   const supabase = createServerClient();
 
   // Fetch case data (service role bypasses RLS)
-  console.log('Fetching case:', caseId, 'for user:', userId);
-  console.log('Type check - caseId:', typeof caseId, 'userId:', typeof userId);
-  
+
   // First, try to get case without user_id filter (service role can see all)
   const { data: caseData, error: caseError } = await supabase
     .from('cases')
     .select('*')
     .eq('id', caseId)
     .single();
-
-  console.log('Case query result:', { 
-    caseFound: !!caseData, 
-    error: caseError?.message,
-    caseUserId: caseData?.user_id,
-    requestedUserId: userId
-  });
 
   if (caseError) {
     console.error('Case query error:', caseError);
@@ -69,9 +62,7 @@ export async function runCaseAnalysis(
   }
 
   // Fetch pre-op photo
-  console.log('Fetching pre-op photos for case:', caseId);
-  console.log('Case ID for photo query:', caseId, 'type:', typeof caseId);
-  
+
   // Double-check caseId is valid UUID before querying
   if (!caseId || typeof caseId !== 'string' || caseId.trim() === '' || caseId === 'undefined') {
     throw new Error(`Geçersiz case ID for photo query: ${caseId}`);
@@ -85,13 +76,6 @@ export async function runCaseAnalysis(
     .order('created_at', { ascending: false })
     .limit(1);
 
-  console.log('Photos query result:', { 
-    photosFound: photos?.length || 0, 
-    photos: photos,
-    photoError: photoError?.message,
-    queryCaseId: caseId
-  });
-
   if (photoError) {
     throw new Error(`Photo query failed: ${photoError.message}`);
   }
@@ -100,23 +84,22 @@ export async function runCaseAnalysis(
     throw new Error('Pre-operative photo not found. Lütfen önce pre-op fotoğraf yükleyin.');
   }
 
-  const preopPhotoUrl = photos[0].url;
-  if (!preopPhotoUrl) {
+  const rawPhotoUrl = photos[0].url;
+  if (!rawPhotoUrl) {
     throw new Error('Photo URL is invalid');
   }
 
+  // Resolve storage path to signed URL (works for both legacy public URLs and new paths)
+  const preopPhotoUrl = await resolveStorageUrl(rawPhotoUrl, 'case-photos', 600);
+
   // Step 1: Vision analysis
-  console.log('Starting Step 1: Vision analysis...');
-  console.log('Image URL:', preopPhotoUrl);
-  console.log('Manual annotation provided:', !!manualAnnotation, manualAnnotation);
   let visionSummary: VisionSummary;
   
   // If manual annotation exists, skip vision model entirely (we only use manual annotation)
   if (manualAnnotation) {
-    console.log('🎯 Manual annotation provided - SKIPPING vision model, using manual annotation only');
     
     // Handle both rectangle and circle annotations
-    const shape = (manualAnnotation as any).shape || 'rectangle';
+    const shape = (manualAnnotation as Record<string, unknown>).shape || 'rectangle';
     let centerX: number, centerY: number, width: number, height: number, points: Array<{ x: number; y: number }>;
     
     if (shape === 'circle') {
@@ -167,80 +150,72 @@ export async function runCaseAnalysis(
         points: points,
       },
     };
-    console.log('✅ Created vision summary with manual annotation ONLY:', visionSummary);
-    console.log(`⚠️ Vision model was SKIPPED - using only manual annotation (shape: ${shape})`);
   } else {
     // No manual annotation, need vision model
     try {
       visionSummary = await analyzeVision(preopPhotoUrl, caseData as Case);
-      console.log('✅ Vision analysis completed');
-    } catch (error: any) {
-      console.error('❌ Vision analysis failed:', error);
-      console.error('Error stack:', error?.stack);
-      const errorMsg = error?.message || 'Bilinmeyen hata';
-      const errorDetails = error?.response ? JSON.stringify(error?.response) : '';
-      throw new Error(`Görüntü analizi başarısız: ${errorMsg}${errorDetails ? ` | Detay: ${errorDetails}` : ''}`);
+    } catch (error: unknown) {
+      console.error('Vision analysis failed:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Bilinmeyen hata';
+      throw new Error(`Görüntü analizi başarısız: ${errorMsg}`);
     }
   }
   
-  // defect_location is already set from manual annotation above, so no need to override again
-  if (manualAnnotation) {
-    console.log('✅ defect_location already set from manual annotation:', visionSummary.defect_location);
-  } else {
-    console.log('ℹ️ No manual annotation provided, using vision-detected location');
-  }
+    // Step 1.25: Extract anatomical landmarks if not already present
+    if (!visionSummary.anatomical_landmarks && preopPhotoUrl) {
+      try {
+        const landmarks = await extractAnatomicalLandmarks(preopPhotoUrl);
+        if (landmarks) {
+          visionSummary.anatomical_landmarks = landmarks;
+        }
+      } catch (landmarkError: unknown) {
+        console.warn('⚠️ Anatomical landmark extraction failed, continuing without:',
+          landmarkError instanceof Error ? landmarkError.message : String(landmarkError));
+      }
+    }
 
     // Step 1.5: Get relevant medical sources for this case
-    console.log('Starting Step 1.5: Fetching relevant medical sources...');
     let medicalSourcesContext = '';
     try {
       const relevantSources = await getRelevantSourcesForCase(
         userId,
         caseData.region,
-        caseData.critical_structures
+        caseData.critical_structures,
+        caseData.critical_structures,
+        `${caseData.region} ${caseData.pathology_suspected || ''} ${caseData.depth || ''}`
       );
       if (relevantSources.length > 0) {
         medicalSourcesContext = formatSourcesForPrompt(relevantSources);
-        console.log(`✅ Found ${relevantSources.length} relevant medical sources`);
-      } else {
-        console.log('ℹ️ No relevant medical sources found for this case');
       }
-    } catch (error: any) {
-      console.warn('⚠️ Could not fetch medical sources, continuing without them:', error.message);
+    } catch (error: unknown) {
+      console.warn('⚠️ Could not fetch medical sources, continuing without them:', error instanceof Error ? error.message : String(error));
       // Don't fail the whole analysis if sources can't be fetched
     }
 
     // Step 2: Flap decision suggestions (with medical sources context)
-    console.log('Starting Step 2: Flap decision suggestions...');
     let flapSuggestions: FlapSuggestion[];
     try {
       flapSuggestions = await suggestFlaps(caseData as Case, visionSummary, medicalSourcesContext);
-      console.log('✅ Flap suggestions completed:', flapSuggestions.length, 'suggestions');
       if (flapSuggestions.length === 0) {
         throw new Error('Hiç flep önerisi oluşturulamadı');
       }
-    } catch (error: any) {
-    console.error('❌ Flap suggestion failed:', error);
-    console.error('Error stack:', error?.stack);
-    console.error('Error response:', error?.response);
-    const errorMsg = error?.message || 'Bilinmeyen hata';
-    const errorDetails = error?.response ? JSON.stringify(error?.response) : '';
+    } catch (error: unknown) {
+    console.error('Flap suggestion failed:', error);
+    const errObj = error as Record<string, unknown>;
+    const errorMsg = error instanceof Error ? error.message : 'Bilinmeyen hata';
+    const errorDetails = errObj?.response ? JSON.stringify(errObj.response) : '';
     throw new Error(`Flep önerisi başarısız: ${errorMsg}${errorDetails ? ` | Detay: ${errorDetails}` : ''}`);
   }
 
   // Step 3: Safety review (optional - if fails, continue without it)
-  console.log('Starting Step 3: Safety review...');
   let safetyResult;
   try {
     safetyResult = await reviewSafety(visionSummary, flapSuggestions);
-    console.log('✅ Safety review completed');
-  } catch (error: any) {
-    console.error('❌ Safety review failed:', error);
-    console.error('Error stack:', error?.stack);
-    console.error('Error response:', error?.response);
-    
+  } catch (error: unknown) {
+    console.error('Safety review failed:', error);
+
     // If safety review fails due to API issues, create a minimal safety review
-    const errorMsg = error?.message || 'Bilinmeyen hata';
+    const errorMsg = error instanceof Error ? error.message : 'Bilinmeyen hata';
     const isCreditError = errorMsg.includes('credit') || errorMsg.includes('balance') || errorMsg.includes('billing');
     
     if (isCreditError) {
@@ -265,45 +240,74 @@ export async function runCaseAnalysis(
   }
   let finalSuggestions = safetyResult.flapSuggestions;
   
-  // Step 2.5: Validate flap drawings (optional - can be async/background)
-  console.log('Starting Step 2.5: Flap drawing validation...');
+  // Step 2.5: Validate flap drawings + correction loop
   try {
-    // Validate each flap drawing if it exists
     const validationPromises = finalSuggestions.map(async (flap) => {
       if (!flap.flap_drawing || !preopPhotoUrl) {
-        return flap; // Skip validation if no drawing or photo
+        return flap;
       }
-      
+
       try {
+        // Initial validation
         const validationResult = await validateFlapDrawing(
           preopPhotoUrl,
           flap,
           visionSummary,
-          1000, // Normalized width
-          1000  // Normalized height
+          1000,
+          1000
         );
-        
-        // Add validation result to flap
-        return {
-          ...flap,
-          validation: validationResult,
-        };
-      } catch (validationError: any) {
-        console.warn(`⚠️ Validation failed for flap ${flap.flap_name}:`, validationError.message);
-        // Continue without validation if it fails
+
+        let resultFlap = { ...flap, validation: validationResult };
+
+        // Step 2.6: Auto-correction for high-severity issues
+        const criticalIssues = validationResult.detectedIssues?.filter(
+          (i: { severity: string }) => i.severity === 'yüksek'
+        ) || [];
+
+        if (criticalIssues.length > 0) {
+          try {
+            const corrections = generateCorrectionSuggestions(validationResult, flap, visionSummary);
+            if (corrections.length > 0) {
+              const corrected = applyCorrections(flap, corrections);
+
+              // Re-validate corrected version
+              const revalidation = await validateFlapDrawing(
+                preopPhotoUrl,
+                corrected,
+                visionSummary,
+                1000,
+                1000
+              );
+
+              const stillCritical = revalidation.detectedIssues?.filter(
+                (i: { severity: string }) => i.severity === 'yüksek'
+              ) || [];
+
+              // Use corrected version if it improved
+              if (stillCritical.length < criticalIssues.length) {
+                console.info(`✅ Auto-correction improved flap "${flap.flap_name}": ${criticalIssues.length} → ${stillCritical.length} critical issues`);
+                resultFlap = { ...corrected, validation: revalidation };
+              }
+            }
+          } catch (correctionError: unknown) {
+            console.warn(`⚠️ Auto-correction failed for flap ${flap.flap_name}:`, correctionError instanceof Error ? correctionError.message : String(correctionError));
+          }
+        }
+
+        return resultFlap;
+      } catch (validationError: unknown) {
+        console.warn(`⚠️ Validation failed for flap ${flap.flap_name}:`, validationError instanceof Error ? validationError.message : String(validationError));
         return flap;
       }
     });
-    
+
     finalSuggestions = await Promise.all(validationPromises);
-    console.log('✅ Flap drawing validation completed');
-  } catch (error: any) {
-    console.warn('⚠️ Flap validation step failed, continuing without validation:', error.message);
-    // Don't fail the whole analysis if validation fails
+  } catch (error: unknown) {
+    console.warn('⚠️ Flap validation step failed, continuing without validation:', error instanceof Error ? error.message : String(error));
   }
   
   // Add 3D model warning to safety review if 3D mode is enabled
-  let safetyReview: SafetyReview = {
+  const safetyReview: SafetyReview = {
     hallucination_risk: safetyResult.hallucination_risk,
     comments: safetyResult.comments,
     legal_disclaimer: safetyResult.legal_disclaimer,
@@ -312,7 +316,6 @@ export async function runCaseAnalysis(
   // Step 3.5: 3D Face Reconstruction (if enabled)
   let face3DModel: Face3DModel | undefined = undefined;
   if (enable3D && faceImages3D && faceImages3D.length === 9) {
-    console.log('Starting Step 3.5: 3D Face Reconstruction...');
     try {
       const reconstructionResult = await generate3DFaceModel(faceImages3D, caseId);
       
@@ -324,7 +327,7 @@ export async function runCaseAnalysis(
       };
 
       if (reconstructionResult.status === 'completed') {
-        console.log('✅ 3D face reconstruction completed');
+        // 3D reconstruction completed successfully
       } else if (reconstructionResult.status === 'failed') {
         console.warn('⚠️ 3D face reconstruction failed:', reconstructionResult.error);
         // Continue with 2D analysis - don't fail the whole pipeline
@@ -336,8 +339,8 @@ export async function runCaseAnalysis(
         ...safetyReview.comments,
         warning3D,
       ];
-    } catch (error: any) {
-      console.error('❌ 3D face reconstruction failed:', error);
+    } catch (error: unknown) {
+      console.error('3D face reconstruction failed:', error);
       // Mark as failed but continue with 2D analysis
       face3DModel = {
         status: 'failed',
@@ -365,15 +368,13 @@ export async function runCaseAnalysis(
   }
 
   // Step 4: Save to database (UPSERT - update if exists, insert if not)
-  console.log('Saving AI result for case:', caseId);
-  console.log('Case ID for save:', caseId, 'type:', typeof caseId);
-  
+
   // Validate caseId again before saving
   if (!caseId || typeof caseId !== 'string' || caseId.trim() === '' || caseId === 'undefined') {
     throw new Error(`Geçersiz case ID for save: ${caseId}`);
   }
   
-  const upsertData: any = {
+  const upsertData: Record<string, unknown> = {
     case_id: caseId.trim(),
     vision_summary: visionSummary,
     flap_suggestions: finalSuggestions,
@@ -393,89 +394,16 @@ export async function runCaseAnalysis(
     upsertData.enable_3d = false;
   }
   
-  console.log('Upsert data prepared:', { 
-    case_id: upsertData.case_id, 
-    hasVisionSummary: !!upsertData.vision_summary,
-    hasFlapSuggestions: !!upsertData.flap_suggestions,
-    hasSafetyReview: !!upsertData.safety_review
-  });
-  
-  // Check if result already exists
-  const { data: existingResult } = await supabase
+  // Atomic upsert - replaces delete+insert race condition
+  const { data: aiResult, error: saveError } = await supabase
     .from('ai_results')
-    .select('id')
-    .eq('case_id', caseId.trim())
-    .maybeSingle();
-
-  let aiResult;
-  let saveError;
-
-  if (existingResult) {
-    // Delete existing record first, then insert new one (to avoid unique constraint error)
-    console.log('Deleting existing AI result before inserting new one:', existingResult.id);
-    const { error: deleteError } = await supabase
-      .from('ai_results')
-      .delete()
-      .eq('case_id', caseId.trim());
-    
-    if (deleteError) {
-      console.error('Error deleting existing result:', deleteError);
-      // Continue anyway - try to insert, might work
-    } else {
-      console.log('Existing AI result deleted successfully');
-    }
-  }
-
-  // Insert new record (after delete if existed)
-  console.log('Inserting new AI result');
-  const { data: insertedResult, error: insertError } = await supabase
-    .from('ai_results')
-    .insert(upsertData)
+    .upsert(upsertData, { onConflict: 'case_id' })
     .select()
     .single();
-  
-  aiResult = insertedResult;
-  saveError = insertError;
-
-  console.log('AI result save result:', { 
-    success: !!aiResult, 
-    error: saveError?.message,
-    aiResultId: aiResult?.id,
-    operation: existingResult ? 'replaced' : 'inserted'
-  });
 
   if (saveError || !aiResult) {
     console.error('Save error details:', saveError);
-    
-    // If still duplicate key error after delete, there's a race condition
-    // Try one more time after a short delay
-    if (saveError?.message?.includes('duplicate key') || saveError?.message?.includes('unique constraint')) {
-      console.log('Duplicate key error persists, retrying after delete...');
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const { error: retryDeleteError } = await supabase
-        .from('ai_results')
-        .delete()
-        .eq('case_id', caseId.trim());
-      
-      if (!retryDeleteError) {
-        const { data: retryResult, error: retryError } = await supabase
-          .from('ai_results')
-          .insert(upsertData)
-          .select()
-          .single();
-        
-        if (retryResult && !retryError) {
-          aiResult = retryResult;
-          saveError = null;
-          console.log('Retry successful after delete');
-        }
-      }
-    }
-    
-    if (saveError || !aiResult) {
-      throw new Error(`AI sonucu kaydedilemedi: ${saveError?.message || 'Bilinmeyen hata'}`);
-    }
+    throw new Error(`AI sonucu kaydedilemedi: ${saveError?.message || 'Bilinmeyen hata'}`);
   }
 
   // Return formatted result

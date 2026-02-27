@@ -34,16 +34,16 @@ export async function createGLBFromMesh(
   // Create accessor for vertices
   const vertexAccessor = document
     .createAccessor()
-    .setArray(meshData.vertices)
+    .setArray(new Float32Array(meshData.vertices.buffer.slice(0)) as Float32Array<ArrayBuffer>)
     .setType('VEC3')
     .setBuffer(buffer);
 
   // Create accessor for normals (if provided)
-  let normalAccessor: Accessor | null = null;
+  let normalAccessor: typeof vertexAccessor | null = null;
   if (meshData.normals && meshData.normals.length > 0) {
     normalAccessor = document
       .createAccessor()
-      .setArray(meshData.normals)
+      .setArray(new Float32Array(meshData.normals.buffer.slice(0)) as Float32Array<ArrayBuffer>)
       .setType('VEC3')
       .setBuffer(buffer);
   }
@@ -51,7 +51,7 @@ export async function createGLBFromMesh(
   // Create accessor for indices
   const indexAccessor = document
     .createAccessor()
-    .setArray(meshData.indices)
+    .setArray(new Uint16Array(meshData.indices.buffer.slice(0)) as Uint16Array<ArrayBuffer>)
     .setType('SCALAR')
     .setBuffer(buffer);
 

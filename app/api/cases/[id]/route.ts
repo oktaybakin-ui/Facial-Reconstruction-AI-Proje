@@ -22,9 +22,10 @@ export async function GET(
     }
 
     return NextResponse.json({ case: caseData }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching case:', error);
-    return NextResponse.json({ error: error.message || 'Bilinmeyen hata' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -88,9 +89,10 @@ export async function PUT(
       { case: updatedCase, message: 'Olgu başarıyla güncellendi' },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating case:', error);
-    return NextResponse.json({ error: error.message || 'Bilinmeyen hata' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -152,9 +154,10 @@ export async function DELETE(
     }
 
     return NextResponse.json({ message: 'Olgu başarıyla silindi' }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error deleting case:', error);
-    return NextResponse.json({ error: error.message || 'Bilinmeyen hata' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 

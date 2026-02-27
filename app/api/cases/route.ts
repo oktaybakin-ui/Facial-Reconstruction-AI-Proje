@@ -98,10 +98,11 @@ export async function POST(request: NextRequest) {
       { case: caseData, message: 'Olgu başarıyla oluşturuldu' },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Create case error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: 'Sunucu hatası', details: error.message },
+      { error: 'Sunucu hatası', details: errorMessage },
       { status: 500 }
     );
   }

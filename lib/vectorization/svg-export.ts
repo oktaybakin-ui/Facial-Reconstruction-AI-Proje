@@ -1,7 +1,7 @@
 'use client';
 
-import html2canvas from 'html2canvas';
-import canvg from 'canvg';
+// html2canvas and canvg are optional dependencies for SVG export
+// They are dynamically used when needed
 
 /**
  * Vectorization Service
@@ -77,7 +77,7 @@ export async function canvasToSVG(
  */
 export async function exportFlapDrawingAsSVG(
   imageUrl: string,
-  flapDrawing: any,
+  flapDrawing: unknown,
   options: {
     includeImage?: boolean;
     includeOverlays?: boolean;
@@ -117,7 +117,7 @@ export async function exportFlapDrawingAsSVG(
         // Convert to SVG
         const svg = await canvasToSVG(canvas);
         resolve(svg);
-      } catch (error: any) {
+      } catch (error: unknown) {
         reject(error);
       }
     };

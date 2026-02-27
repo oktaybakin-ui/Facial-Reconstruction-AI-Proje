@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 type Language = 'tr' | 'en';
 
@@ -129,20 +129,19 @@ const translations: Record<Language, Record<string, string>> = {
 };
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('tr');
-
-  useEffect(() => {
+  const [language, setLanguageState] = useState<Language>(() => {
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem('language') as Language;
         if (saved && (saved === 'tr' || saved === 'en')) {
-          setLanguageState(saved);
+          return saved;
         }
       } catch (e) {
         // Ignore localStorage errors
       }
     }
-  }, []);
+    return 'tr';
+  });
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);

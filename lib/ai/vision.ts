@@ -1,7 +1,8 @@
 'use server';
 
 import { getOpenAIClient } from '@/lib/openai';
-import type { VisionSummary } from '@/types/ai';
+import { withRetry } from './retry';
+import type { VisionSummary, AnatomicalLandmarks } from '@/types/ai';
 import type { Case } from '@/types/cases';
 
 const SYSTEM_PROMPT = `You are a medical-grade computer vision assistant.
@@ -14,8 +15,9 @@ Your tasks:
 4. List nearby critical structures (alar rim, eyelid margin, lip commissure, etc.).
 5. Classify whether this is a high-aesthetic-impact zone.
 6. CRITICAL: Detect the EXACT location of the defect on the image and provide coordinates.
+7. CRITICAL: Detect key facial anatomical landmark positions on the image for surgical planning.
 
-Output JSON with keys: detected_region, estimated_width_mm, estimated_height_mm, depth_estimation, critical_structures, aesthetic_zone, defect_location.
+Output JSON with keys: detected_region, estimated_width_mm, estimated_height_mm, depth_estimation, critical_structures, aesthetic_zone, defect_location, anatomical_landmarks.
 
 defect_location format:
 {
@@ -26,7 +28,26 @@ defect_location format:
   "points": [{"x": number, "y": number}, ...] (defect polygon boundary points, normalized 0-1000)
 }
 
-IMPORTANT: defect_location coordinates must be EXACTLY aligned with where the defect appears in the image.
+anatomical_landmarks format (all coordinates normalized 0-1000):
+{
+  "leftEye": {"x": number, "y": number},
+  "rightEye": {"x": number, "y": number},
+  "noseTip": {"x": number, "y": number},
+  "noseBase": {"x": number, "y": number},
+  "leftMouthCorner": {"x": number, "y": number},
+  "rightMouthCorner": {"x": number, "y": number},
+  "chin": {"x": number, "y": number},
+  "foreheadCenter": {"x": number, "y": number},
+  "leftEyebrow": {"x": number, "y": number},
+  "rightEyebrow": {"x": number, "y": number},
+  "nasolabialFoldLeft": {"x": number, "y": number},
+  "nasolabialFoldRight": {"x": number, "y": number},
+  "facialMidline": {"topX": number, "bottomX": number},
+  "eyeLine": {"y": number},
+  "mouthLine": {"y": number}
+}
+
+IMPORTANT: Both defect_location and anatomical_landmarks coordinates must be EXACTLY aligned with the actual positions in the image. These are used for precise surgical flap planning.
 
 Be precise and conservative in your estimates.`;
 
@@ -39,25 +60,15 @@ export async function analyzeVision(
     throw new Error('OpenAI API key bulunamadı. Lütfen .env.local dosyasında OPENAI_API_KEY değişkenini ayarlayın.');
   }
 
-  console.log('Starting vision analysis with image URL:', imageUrl);
-  console.log('OpenAI API key present:', !!process.env.OPENAI_API_KEY);
-  
   // Verify image URL is accessible
   try {
     const imageCheck = await fetch(imageUrl, { method: 'HEAD' });
-    console.log('Image URL accessibility check:', {
-      url: imageUrl,
-      status: imageCheck.status,
-      ok: imageCheck.ok,
-      contentType: imageCheck.headers.get('content-type'),
-    });
-    
     if (!imageCheck.ok) {
       throw new Error(`Image URL erişilemiyor. Status: ${imageCheck.status}. Lütfen fotoğraf URL'sini kontrol edin.`);
     }
-  } catch (imgError: any) {
-    console.error('Image URL not accessible:', imgError.message);
-    throw new Error(`Fotoğraf URL'si erişilemiyor: ${imgError.message}. Lütfen fotoğrafın yüklü olduğundan emin olun.`);
+  } catch (imgError: unknown) {
+    console.error('Image URL not accessible:', imgError instanceof Error ? imgError.message : String(imgError));
+    throw new Error(`Fotoğraf URL'si erişilemiyor: ${imgError instanceof Error ? imgError.message : String(imgError)}. Lütfen fotoğrafın yüklü olduğundan emin olun.`);
   }
 
   try {
@@ -81,132 +92,68 @@ export async function analyzeVision(
 
   Please analyze the image and provide a JSON response with your findings including defect_location.`;
 
-    console.log('Calling OpenAI Vision API with image URL:', imageUrl);
-    console.log('User prompt:', userPrompt.substring(0, 100) + '...');
-    
     // Fetch image and convert to base64 - OpenAI needs direct access to image data
     let imageContent: string;
     try {
-      console.log('Step 1: Fetching image from URL to convert to base64...');
-      console.log('Image URL:', imageUrl);
-      
       const imageResponse = await fetch(imageUrl);
-      console.log('Image fetch response:', {
-        status: imageResponse.status,
-        ok: imageResponse.ok,
-        contentType: imageResponse.headers.get('content-type'),
-        contentLength: imageResponse.headers.get('content-length'),
-      });
-      
       if (!imageResponse.ok) {
         throw new Error(`Image fetch failed: ${imageResponse.status} ${imageResponse.statusText}`);
       }
       
-      console.log('Step 2: Converting image to base64...');
       const imageBuffer = await imageResponse.arrayBuffer();
-      console.log('Image buffer size:', imageBuffer.byteLength, 'bytes');
       
       // Convert ArrayBuffer to base64 (Node.js compatible)
       const base64String = Buffer.from(imageBuffer).toString('base64');
       const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
       
       imageContent = `data:${contentType};base64,${base64String}`;
-      console.log('Step 3: Image converted to base64 successfully');
-      console.log('Base64 data URI length:', imageContent.length, 'chars');
-      console.log('Base64 preview:', imageContent.substring(0, 50) + '...');
-    } catch (fetchError: any) {
-      console.error('Failed to fetch/convert image:', fetchError.message);
-      console.error('Error stack:', fetchError.stack);
-      throw new Error(`Fotoğraf indirilemedi veya base64'e çevrilemedi: ${fetchError.message}`);
+    } catch (fetchError: unknown) {
+      console.error('Failed to fetch/convert image:', fetchError instanceof Error ? fetchError.message : String(fetchError));
+      throw new Error(`Fotoğraf indirilemedi veya base64'e çevrilemedi: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`);
     }
     
     const openai = getOpenAIClient();
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: userPrompt },
-            {
-              type: 'image_url',
-              image_url: {
-                url: imageContent, // Use base64 data URI instead of URL
+    const response = await withRetry(
+      () => openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: userPrompt },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: imageContent, // Use base64 data URI instead of URL
+                },
               },
-            },
-          ],
-        },
-      ],
-      max_tokens: 1500, // Increased for defect location coordinates
-      response_format: { type: 'json_object' },
-    });
-
-    console.log('OpenAI API response received:', {
-      hasChoices: !!response.choices,
-      choicesLength: response.choices?.length || 0,
-      firstChoice: response.choices?.[0] ? {
-        hasMessage: !!response.choices[0].message,
-        hasContent: !!response.choices[0].message?.content,
-        contentLength: response.choices[0].message?.content?.length || 0,
-        contentPreview: response.choices[0].message?.content?.substring(0, 100),
-        finishReason: response.choices[0].finish_reason,
-      } : null,
-    });
+            ],
+          },
+        ],
+        max_tokens: 2500,
+        response_format: { type: 'json_object' },
+      }),
+      { maxRetries: 2, initialDelayMs: 2000 }
+    );
 
     const content = response.choices[0]?.message?.content;
-    
-    // Log full response structure for debugging
-    console.log('Full response structure:', JSON.stringify({
-      choices: response.choices?.map((choice: any) => ({
-        index: choice.index,
-        message: {
-          role: choice.message?.role,
-          content: choice.message?.content ? `[${choice.message.content.length} chars]` : 'null/empty',
-          contentPreview: choice.message?.content?.substring(0, 200),
-        },
-        finish_reason: choice.finish_reason,
-      })),
-    }, null, 2));
-    
+
     // Finish reason "stop" is actually success - but content might be empty
-    if (!content || content.trim() === '') {
-      const fullResponseDebug = JSON.stringify(response, null, 2);
-      console.error('No content in response (even though finish_reason might be stop):', {
+    if (!content || typeof content !== 'string' || content.trim() === '') {
+      console.error('No content in vision response:', {
         finishReason: response.choices[0]?.finish_reason,
-        message: response.choices[0]?.message,
-        fullResponse: fullResponseDebug.substring(0, 1000),
       });
-      
-      // Check if image URL is accessible
-      try {
-        const imageCheck = await fetch(imageUrl, { method: 'HEAD' });
-        console.log('Image URL accessibility check:', {
-          url: imageUrl,
-          status: imageCheck.status,
-          accessible: imageCheck.ok,
-        });
-      } catch (imgError: any) {
-        console.error('Image URL not accessible:', imgError.message);
-      }
-      
       throw new Error(`Vision model yanıt verdi ama içerik boş. Finish reason: ${response.choices[0]?.finish_reason || 'unknown'}. İçerik uzunluğu: ${content?.length || 0}`);
     }
-    
-    console.log('Content received successfully, length:', content.length);
 
-    console.log('Response content received:', content.substring(0, 200) + '...');
-    
     let parsed;
     try {
       parsed = JSON.parse(content);
-    } catch (parseError: any) {
-      console.error('JSON parse error:', parseError);
-      console.error('Content that failed to parse:', content);
-      throw new Error(`Vision model yanıtı parse edilemedi: ${parseError.message}`);
+    } catch (parseError: unknown) {
+      console.error('Vision JSON parse error:', parseError);
+      throw new Error(`Vision model yanıtı parse edilemedi: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
     }
-    
-    console.log('Parsed response:', parsed);
     
       // Validate and normalize the response
       return {
@@ -223,25 +170,20 @@ export async function analyzeVision(
           center_y: parsed.defect_location.center_y || 0,
           width: parsed.defect_location.width || 0,
           height: parsed.defect_location.height || 0,
-          points: Array.isArray(parsed.defect_location.points) 
-            ? parsed.defect_location.points 
+          points: Array.isArray(parsed.defect_location.points)
+            ? parsed.defect_location.points
             : undefined,
         } : undefined,
+        anatomical_landmarks: parseAnatomicalLandmarks(parsed.anatomical_landmarks),
       };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Vision analysis error:', error);
-    console.error('Error details:', {
-      message: error?.message,
-      status: error?.status,
-      statusCode: error?.statusCode,
-      stack: error?.stack,
-      response: error?.response,
-    });
-    
+    const errObj = error as Record<string, unknown>;
+
     // Handle OpenAI API key errors specifically
-    const errorMessage = error?.message || '';
-    const errorStatus = error?.status || error?.statusCode;
-    
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStatus = errObj?.status || errObj?.statusCode;
+
     if (errorStatus === 401 || errorMessage.includes('Incorrect API key') || errorMessage.includes('401')) {
       throw new Error(
         'OpenAI API key geçersiz veya eksik. ' +
@@ -249,7 +191,7 @@ export async function analyzeVision(
         'API key\'inizi https://platform.openai.com/account/api-keys adresinden alabilirsiniz.'
       );
     }
-    
+
     // Handle quota/rate limit errors
     if (errorStatus === 429 || errorMessage.includes('quota') || errorMessage.includes('rate limit')) {
       throw new Error(
@@ -257,9 +199,93 @@ export async function analyzeVision(
         'Lütfen https://platform.openai.com/account/billing adresinden quota durumunuzu kontrol edin.'
       );
     }
-    
+
     // Re-throw error instead of returning fallback so orchestrator can handle it properly
     throw new Error(`Görüntü analizi başarısız: ${errorMessage || 'Bilinmeyen hata'}`);
+  }
+}
+
+// Parse anatomical landmarks from GPT-4o response
+function parseAnatomicalLandmarks(raw: Record<string, unknown> | undefined): AnatomicalLandmarks | undefined {
+  if (!raw) return undefined;
+
+  const pt = (obj: unknown): { x: number; y: number } => {
+    const o = obj as Record<string, number> | undefined;
+    return { x: o?.x ?? 0, y: o?.y ?? 0 };
+  };
+
+  // Require at minimum leftEye and rightEye
+  if (!raw.leftEye || !raw.rightEye) return undefined;
+
+  return {
+    leftEye: pt(raw.leftEye),
+    rightEye: pt(raw.rightEye),
+    noseTip: pt(raw.noseTip),
+    noseBase: pt(raw.noseBase),
+    leftMouthCorner: pt(raw.leftMouthCorner),
+    rightMouthCorner: pt(raw.rightMouthCorner),
+    chin: pt(raw.chin),
+    foreheadCenter: raw.foreheadCenter ? pt(raw.foreheadCenter) : undefined,
+    leftEyebrow: raw.leftEyebrow ? pt(raw.leftEyebrow) : undefined,
+    rightEyebrow: raw.rightEyebrow ? pt(raw.rightEyebrow) : undefined,
+    nasolabialFoldLeft: raw.nasolabialFoldLeft ? pt(raw.nasolabialFoldLeft) : undefined,
+    nasolabialFoldRight: raw.nasolabialFoldRight ? pt(raw.nasolabialFoldRight) : undefined,
+    facialMidline: {
+      topX: (raw.facialMidline as Record<string, number>)?.topX ?? 500,
+      bottomX: (raw.facialMidline as Record<string, number>)?.bottomX ?? 500,
+    },
+    eyeLine: { y: (raw.eyeLine as Record<string, number>)?.y ?? 400 },
+    mouthLine: { y: (raw.mouthLine as Record<string, number>)?.y ?? 650 },
+  };
+}
+
+// Lightweight landmark extraction for manual annotation path (separate API call)
+export async function extractAnatomicalLandmarks(imageUrl: string): Promise<AnatomicalLandmarks | undefined> {
+  if (!process.env.OPENAI_API_KEY) return undefined;
+
+  try {
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) return undefined;
+
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const base64String = Buffer.from(imageBuffer).toString('base64');
+    const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
+    const imageContent = `data:${contentType};base64,${base64String}`;
+
+    const openai = getOpenAIClient();
+    const response = await withRetry(
+      () => openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a facial anatomy detection system. Detect facial landmark positions on the given photograph. Return ONLY JSON with anatomical_landmarks object. All coordinates normalized 0-1000.',
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Detect facial landmarks on this image. Return JSON: { "anatomical_landmarks": { "leftEye": {"x","y"}, "rightEye": {"x","y"}, "noseTip": {"x","y"}, "noseBase": {"x","y"}, "leftMouthCorner": {"x","y"}, "rightMouthCorner": {"x","y"}, "chin": {"x","y"}, "foreheadCenter": {"x","y"}, "leftEyebrow": {"x","y"}, "rightEyebrow": {"x","y"}, "nasolabialFoldLeft": {"x","y"}, "nasolabialFoldRight": {"x","y"}, "facialMidline": {"topX","bottomX"}, "eyeLine": {"y"}, "mouthLine": {"y"} } }. All values 0-1000 normalized to image dimensions.',
+              },
+              { type: 'image_url', image_url: { url: imageContent } },
+            ],
+          },
+        ],
+        max_tokens: 800,
+        response_format: { type: 'json_object' },
+      }),
+      { maxRetries: 1, initialDelayMs: 1000 }
+    );
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) return undefined;
+
+    const parsed = JSON.parse(content);
+    return parseAnatomicalLandmarks(parsed.anatomical_landmarks);
+  } catch (error: unknown) {
+    console.warn('Anatomical landmark extraction failed:', error instanceof Error ? error.message : String(error));
+    return undefined;
   }
 }
 

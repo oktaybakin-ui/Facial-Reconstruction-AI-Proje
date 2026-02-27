@@ -35,7 +35,7 @@ export async function POST(
     // Use service role key to bypass RLS
     const adminSupabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       is_banned: true,
       ban_reason: reason || 'Yönetici tarafından yasaklandı',
       banned_at: new Date().toISOString(),
