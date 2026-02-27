@@ -57,6 +57,7 @@ export default function CaseDetailContent({
   const [faceImages3D, setFaceImages3D] = useState<string[]>([]);
   const [showAnatomicalOverlay, setShowAnatomicalOverlay] = useState(false);
   const [overlayType, setOverlayType] = useState<'guide-lines' | 'golden-ratio' | 'muscle-map' | 'bone-map'>('guide-lines');
+  const [showLandmarks, setShowLandmarks] = useState(false);
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [selectedFlapForFeedback, setSelectedFlapForFeedback] = useState<{ index: number; name: string } | null>(null);
   const [validatingClient, setValidatingClient] = useState<{ [key: number]: boolean }>({});
@@ -419,7 +420,19 @@ export default function CaseDetailContent({
                     }}
                     className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all text-sm font-medium shadow-md hover:shadow-lg"
                   >
-                    {showFlapDrawings ? '👁️ Gizle' : '📐 Göster'}
+                    {showFlapDrawings ? 'Gizle' : 'Göster'}
+                  </button>
+                )}
+                {analysisResult?.vision_summary?.anatomical_landmarks && (
+                  <button
+                    onClick={() => setShowLandmarks(!showLandmarks)}
+                    className={`px-4 py-2 rounded-lg transition-all text-sm font-medium shadow-md hover:shadow-lg ${
+                      showLandmarks
+                        ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600'
+                        : 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-700 hover:from-gray-300 hover:to-gray-400'
+                    }`}
+                  >
+                    {showLandmarks ? 'Landmark Gizle' : 'Landmark Göster'}
                   </button>
                 )}
                 <button
@@ -447,6 +460,8 @@ export default function CaseDetailContent({
                   showAnnotationMode={showAnnotation}
                   annotationShape={annotationShape}
                   onShapeChange={(shape) => setAnnotationShape(shape)}
+                  anatomicalLandmarks={analysisResult?.vision_summary?.anatomical_landmarks}
+                  showLandmarks={showLandmarks}
                 />
                 {showAnatomicalOverlay && imageInfo && (
                   <AnatomicalOverlay

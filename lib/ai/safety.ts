@@ -1,6 +1,6 @@
 import { getAnthropicClient } from '@/lib/anthropic';
 import { withRetry } from './retry';
-import { extractJson } from './json-repair';
+import { extractJson, attemptJsonRepair } from './json-repair';
 import type { FlapSuggestion, SafetyReview, VisionSummary } from '@/types/ai';
 
 const SYSTEM_PROMPT = `Sen tıbbi karar destek JSON çıktısı için güvenlik ve tutarlılık denetçisisin.
@@ -48,20 +48,53 @@ Aynı JSON yapısını döndür ama:
     const response = await withRetry(
       () => anthropic.messages.create({
         model: 'claude-sonnet-4-6',
-        max_tokens: 8000,
+        max_tokens: 16000,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: userPrompt }],
       }),
       { maxRetries: 3, initialDelayMs: 1000 }
     );
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Beklenmeyen yanıt tipi');
+    const rawText = response.content
+      .filter(block => block.type === 'text')
+      .map(block => block.type === 'text' ? block.text : '')
+      .join('');
+
+    if (!rawText || rawText.trim() === '') {
+      throw new Error('Güvenlik incelemesi boş yanıt döndü');
     }
 
-    const cleanJson = extractJson(content.text);
-    const parsed = JSON.parse(cleanJson);
+    // Handle truncation
+    let contentToParse = rawText;
+    if (response.stop_reason === 'max_tokens') {
+      console.warn('Safety review response was truncated. Attempting JSON repair...');
+      const repaired = attemptJsonRepair(rawText);
+      if (repaired) {
+        contentToParse = repaired;
+      }
+    }
+
+    const cleanJson = extractJson(contentToParse);
+    let parsed;
+    try {
+      parsed = JSON.parse(cleanJson);
+    } catch (parseError: unknown) {
+      // Attempt repair on parse failure
+      console.warn('Safety JSON parse failed, attempting repair...');
+      const repaired = attemptJsonRepair(contentToParse);
+      if (repaired) {
+        parsed = JSON.parse(repaired);
+      } else {
+        console.error('Safety JSON repair failed:', parseError);
+        // Return minimal safety review instead of crashing
+        return {
+          hallucination_risk: 'orta' as const,
+          comments: ['Güvenlik incelemesi JSON parse hatası nedeniyle tamamlanamadı. Manuel kontrol önerilir.'],
+          legal_disclaimer: 'Bu öneriler yalnızca karar destek amaçlıdır; nihai karar, hastayı değerlendiren klinik ekibe aittir.',
+          flapSuggestions: flapSuggestions,
+        };
+      }
+    }
 
     const safetyReview: SafetyReview = parsed.safety_review || {
       hallucination_risk: 'orta' as const,
