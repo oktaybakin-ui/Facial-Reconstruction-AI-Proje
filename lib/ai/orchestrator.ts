@@ -207,59 +207,32 @@ export async function runCaseAnalysis(
     throw new Error(`Flep önerisi başarısız: ${errorMsg}${errorDetails ? ` | Detay: ${errorDetails}` : ''}`);
   }
 
-  // Step 3: Safety review (optional - if fails, continue without it)
-  let safetyResult;
-  try {
-    safetyResult = await reviewSafety(visionSummary, flapSuggestions);
-  } catch (error: unknown) {
-    console.error('Safety review failed:', error);
+  // Step 3 + 3.5: Run safety review AND validation in PARALLEL for speed
+  const minimalSafetyReview = {
+    hallucination_risk: 'orta' as const,
+    comments: ['Güvenlik incelemesi tamamlanamadı. Lütfen manuel kontrol yapın.'],
+    legal_disclaimer: 'Bu öneriler yalnızca karar destek amaçlıdır; nihai karar, hastayı değerlendiren klinik ekibe aittir. Bu platform klinik muayene, cerrahi deneyim ve multidisipliner değerlendirmelerin yerine geçmez.',
+    flapSuggestions: flapSuggestions,
+  };
 
-    // If safety review fails due to API issues, create a minimal safety review
-    const errorMsg = error instanceof Error ? error.message : 'Bilinmeyen hata';
-    const isCreditError = errorMsg.includes('credit') || errorMsg.includes('balance') || errorMsg.includes('billing');
-    
-    if (isCreditError) {
-      console.warn('⚠️ Safety review skipped due to Anthropic API credit issue. Continuing with minimal safety review...');
-      // Create minimal safety review so analysis can complete
-      safetyResult = {
-        hallucination_risk: 'orta' as const,
-        comments: ['Güvenlik incelemesi Anthropic API kredi sorunu nedeniyle atlandı. Lütfen manuel kontrol yapın.'],
-        legal_disclaimer: 'Bu öneriler yalnızca karar destek amaçlıdır; nihai karar, hastayı değerlendiren klinik ekibe aittir. Bu platform klinik muayene, cerrahi deneyim ve multidisipliner değerlendirmelerin yerine geçmez.',
-        flapSuggestions: flapSuggestions, // Use original suggestions without safety review
-      };
-    } else {
-      // For other errors, create minimal safety review but log the error
-      console.warn('⚠️ Safety review failed, using minimal safety review...');
-      safetyResult = {
-        hallucination_risk: 'orta' as const,
+  const [safetySettled, validationSettled] = await Promise.allSettled([
+    // Safety review
+    reviewSafety(visionSummary, flapSuggestions).catch((error: unknown) => {
+      console.error('Safety review failed:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Bilinmeyen hata';
+      return {
+        ...minimalSafetyReview,
         comments: [`Güvenlik incelemesi tamamlanamadı: ${errorMsg}. Lütfen manuel kontrol yapın.`],
-        legal_disclaimer: 'Bu öneriler yalnızca karar destek amaçlıdır; nihai karar, hastayı değerlendiren klinik ekibe aittir. Bu platform klinik muayene, cerrahi deneyim ve multidisipliner değerlendirmelerin yerine geçmez.',
-        flapSuggestions: flapSuggestions,
       };
-    }
-  }
-  let finalSuggestions = safetyResult.flapSuggestions;
-  
-  // Step 2.5: Validate flap drawings + correction loop
-  try {
-    const validationPromises = finalSuggestions.map(async (flap) => {
-      if (!flap.flap_drawing || !preopPhotoUrl) {
-        return flap;
-      }
-
+    }),
+    // Validation (parallel with safety - no dependency)
+    Promise.all(flapSuggestions.map(async (flap) => {
+      if (!flap.flap_drawing || !preopPhotoUrl) return flap;
       try {
-        // Initial validation
-        const validationResult = await validateFlapDrawing(
-          preopPhotoUrl,
-          flap,
-          visionSummary,
-          1000,
-          1000
-        );
-
+        const validationResult = await validateFlapDrawing(preopPhotoUrl, flap, visionSummary, 1000, 1000);
         let resultFlap = { ...flap, validation: validationResult };
 
-        // Step 2.6: Auto-correction for high-severity issues
+        // Auto-correction for critical issues
         const criticalIssues = validationResult.detectedIssues?.filter(
           (i: { severity: string }) => i.severity === 'yüksek'
         ) || [];
@@ -269,42 +242,34 @@ export async function runCaseAnalysis(
             const corrections = generateCorrectionSuggestions(validationResult, flap, visionSummary);
             if (corrections.length > 0) {
               const corrected = applyCorrections(flap, corrections);
-
-              // Re-validate corrected version
-              const revalidation = await validateFlapDrawing(
-                preopPhotoUrl,
-                corrected,
-                visionSummary,
-                1000,
-                1000
-              );
-
-              const stillCritical = revalidation.detectedIssues?.filter(
-                (i: { severity: string }) => i.severity === 'yüksek'
-              ) || [];
-
-              // Use corrected version if it improved
-              if (stillCritical.length < criticalIssues.length) {
-                console.info(`✅ Auto-correction improved flap "${flap.flap_name}": ${criticalIssues.length} → ${stillCritical.length} critical issues`);
-                resultFlap = { ...corrected, validation: revalidation };
-              }
+              resultFlap = { ...corrected, validation: validationResult };
+              console.info(`✅ Auto-correction applied for flap "${flap.flap_name}": ${criticalIssues.length} critical issues`);
             }
           } catch (correctionError: unknown) {
             console.warn(`⚠️ Auto-correction failed for flap ${flap.flap_name}:`, correctionError instanceof Error ? correctionError.message : String(correctionError));
           }
         }
-
         return resultFlap;
       } catch (validationError: unknown) {
         console.warn(`⚠️ Validation failed for flap ${flap.flap_name}:`, validationError instanceof Error ? validationError.message : String(validationError));
         return flap;
       }
-    });
+    })).catch(() => flapSuggestions),
+  ]);
 
-    finalSuggestions = await Promise.all(validationPromises);
-  } catch (error: unknown) {
-    console.warn('⚠️ Flap validation step failed, continuing without validation:', error instanceof Error ? error.message : String(error));
-  }
+  // Merge results: safety review modifies suggestions, validation adds validation data
+  const safetyResult = safetySettled.status === 'fulfilled' ? safetySettled.value : minimalSafetyReview;
+  const validatedFlaps = validationSettled.status === 'fulfilled' ? validationSettled.value : flapSuggestions;
+
+  // Merge safety-reviewed suggestions with validation data
+  const safetySuggestions = safetyResult.flapSuggestions || flapSuggestions;
+  let finalSuggestions: FlapSuggestion[] = safetySuggestions.map((safeFlap, idx) => {
+    const validated = validatedFlaps[idx];
+    if (validated && 'validation' in validated) {
+      return { ...safeFlap, validation: validated.validation } as FlapSuggestion;
+    }
+    return safeFlap;
+  });
   
   // Add 3D model warning to safety review if 3D mode is enabled
   const safetyReview: SafetyReview = {

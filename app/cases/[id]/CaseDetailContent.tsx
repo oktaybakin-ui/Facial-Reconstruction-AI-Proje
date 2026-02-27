@@ -235,7 +235,15 @@ export default function CaseDetailContent({
       router.refresh();
     } catch (err: unknown) {
       console.error('AI Analysis failed:', err);
-      setError(err instanceof Error ? err.message : 'Analiz sırasında hata oluştu. Konsolu kontrol edin (F12).');
+
+      // Handle AbortError (timeout or connection lost)
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setError('AI analizi zaman aşımına uğradı. Sunucu bağlantısı kesildi. Lütfen tekrar deneyin. (Vercel Hobby plan\'da max 60sn - uzun analizler için Pro plan gerekebilir)');
+      } else if (err instanceof TypeError && err.message?.includes('fetch')) {
+        setError('Sunucuya bağlanılamadı. İnternet bağlantınızı kontrol edin ve tekrar deneyin.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Analiz sırasında hata oluştu. Konsolu kontrol edin (F12).');
+      }
     } finally {
       setAnalyzing(false);
     }
