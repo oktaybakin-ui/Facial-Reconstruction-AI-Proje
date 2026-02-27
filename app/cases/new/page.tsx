@@ -282,6 +282,13 @@ export default function NewCasePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Validate: pre-op photo is required
+    if (!photoFile) {
+      setError('Pre-op fotoğraf zorunludur. Lütfen bir fotoğraf yükleyin.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -476,7 +483,15 @@ export default function NewCasePage() {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit}>
+        <form
+          onSubmit={handleSubmit}
+          onKeyDown={(e) => {
+            // Prevent Enter key from submitting the form accidentally
+            if (e.key === 'Enter' && e.target instanceof HTMLInputElement) {
+              e.preventDefault();
+            }
+          }}
+        >
           {/* ====================================================== */}
           {/*  STEP 1 - Hasta Bilgileri                               */}
           {/* ====================================================== */}
@@ -734,7 +749,9 @@ export default function NewCasePage() {
               <div className="space-y-6">
                 {/* Drag & Drop upload zone */}
                 <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-slate-700">{`Pre-op Fotoğraf`}</label>
+                  <label className="block text-sm font-medium text-slate-700">
+                    {`Pre-op Fotoğraf`} <span className="text-red-500 ml-0.5">*</span>
+                  </label>
 
                   {!photoUrl ? (
                     <div
@@ -852,9 +869,16 @@ export default function NewCasePage() {
                   <ArrowRightIcon className="w-4 h-4" />
                 </Button>
               ) : (
-                <Button type="submit" variant="primary" size="lg" loading={loading}>
-                  Kaydet
-                </Button>
+                <div className="flex items-center gap-3">
+                  {!photoFile && (
+                    <p className="text-sm text-amber-600 font-medium">
+                      Fotoğraf yükleyin
+                    </p>
+                  )}
+                  <Button type="submit" variant="primary" size="lg" loading={loading} disabled={!photoFile}>
+                    Kaydet
+                  </Button>
+                </div>
               )}
             </div>
           </div>
